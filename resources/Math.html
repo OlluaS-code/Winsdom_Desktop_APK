@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Matemática</title>
+  <link rel="stylesheet" href="assets/Math.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/algebrite@1.4.0/dist/algebrite.bundle-for-browser.min.js"></script>
+  <script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+  <script src="https://unpkg.com/function-plot/dist/function-plot.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        processEscapes: true
+      },
+      options: { enableMenu: false }
+    };
+  </script>
+  <script id="MathJax-script" async
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+</head>
+
+<body>
+  <div id="app-container">
+    <nav class="top-nav">
+      <button class="nav-btn active" data-view="whiteboard">Quadro Branco</button>
+      <button class="nav-btn" data-view="editor">Editor LaTeX</button>
+      <button class="nav-btn" data-view="calculator">Calculadora</button>
+    </nav>
+
+    <section id="view-whiteboard" class="view">
+      <div id="canvas-container">
+        <canvas id="whiteboard"></canvas>
+        <textarea id="text-input" spellcheck="false" rows="1"></textarea>
+        <aside class="sidebar" id="main-sidebar">
+          <div class="tool-group">
+            <div class="tool-btn active" data-tool="pen" title="Caneta (P)">
+              <i data-lucide="pencil" size="20"></i>
+            </div>
+            <div class="tool-btn" data-tool="text" title="Texto (T)">
+              <i data-lucide="type" size="20"></i>
+            </div>
+            <div class="tool-btn" data-tool="eraser" title="Borracha (E)">
+              <i data-lucide="eraser" size="20"></i>
+            </div>
+          </div>
+          <div class="tool-group">
+            <div class="color-picker active" style="background-color: #1e293b;" data-color="#1e293b"></div>
+            <div class="color-picker" style="background-color: #ef4444;" data-color="#ef4444"></div>
+            <div class="color-picker" style="background-color: #3b82f6;" data-color="#3b82f6"></div>
+            <div class="color-picker" style="background-color: #22c55e;" data-color="#22c55e"></div>
+          </div>
+          <div class="tool-group">
+            <div class="submenu-container">
+              <div class="tool-btn" id="btn-edit">
+                <i data-lucide="sliders-horizontal" size="20"></i>
+              </div>
+              <div class="submenu" id="menu-edit">
+                <div class="submenu-item" onclick="app.undo()">Desfazer <span class="shortcut">Ctrl+Z</span></div>
+                <div class="submenu-item" onclick="app.redo()">Refazer <span class="shortcut">Ctrl+Y</span></div>
+                <div class="separator"></div>
+                <div class="submenu-item" onclick="app.cut()">Recortar <span class="shortcut">Ctrl+X</span></div>
+                <div class="submenu-item" onclick="app.copy()">Copiar <span class="shortcut">Ctrl+C</span></div>
+                <div class="submenu-item" onclick="app.paste()">Colar <span class="shortcut">Ctrl+V</span></div>
+              </div>
+            </div>
+            <div class="tool-group">
+              <input type="range" min="12" max="80" value="20" id="font-size"
+                style="width: 40px; height: 60px; appearance: slider-vertical;">
+              <span id="size-label" style="font-size: 10px; font-weight: bold; color: #94a3b8;">20px</span>
+            </div>
+            <div class="tool-btn" onclick="app.clear()">
+              <i data-lucide="trash-2" size="20"></i>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="view-editor" class="view" style="display:none;">
+      <div class="editor-grid">
+        <div class="input-panel">
+          <h3>Expressão (Função, etc.)</h3>
+          <textarea id="math-input" placeholder="Digite aqui..."></textarea>
+          <div id="error-display"></div>
+        </div>
+        <div class="preview-panel">
+          <div class="preview-header">
+            <h3>Resultado e Gráfico</h3>
+            <label class="toggle-control">
+              <span>Mostrar Gráfico</span>
+              <input type="checkbox" id="toggle-plot" checked>
+            </label>
+          </div>
+          <div id="math-output"></div>
+          <div id="plot-container"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-calculator" class="view" style="display:none;">
+      <div class="calculator-container">
+        <div class="calculator">
+          <input type="text" id="calc-display" placeholder="0" readonly>
+          <div class="buttons-grid">
+            <button class="btn-func">AC</button>
+            <button class="btn-func">DEL</button>
+            <button class="btn-func">(</button>
+            <button class="btn-func">)</button>
+            <button class="btn-func">%</button>
+
+            <button class="btn-sci">º</button>
+            <button class="btn-sci">sin</button>
+            <button class="btn-sci">cos</button>
+            <button class="btn-sci">tan</button>
+            <button class="btn-sci">log</button>
+            <button class="btn-sci">ln</button>
+
+            <button class="btn-num">7</button>
+            <button class="btn-num">8</button>
+            <button class="btn-num">9</button>
+            <button class="btn-op">÷</button>
+            <button class="btn-sci">√</button>
+
+            <button class="btn-num">4</button>
+            <button class="btn-num">5</button>
+            <button class="btn-num">6</button>
+            <button class="btn-op">×</button>
+            <button class="btn-sci">^</button>
+
+            <button class="btn-num">1</button>
+            <button class="btn-num">2</button>
+            <button class="btn-num">3</button>
+            <button class="btn-op">-</button>
+            <button class="btn-sci">π</button>
+
+            <button class="btn-num">0</button>
+            <button class="btn-num">.</button>
+            <button class="btn-equal">=</button>
+            <button class="btn-op">+</button>
+            <button class="btn-sci">e</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
+    crossorigin="anonymous"></script>
+  <script src="scripts/Whiteboard.js"></script>
+  <script src="scripts/Math.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,237 @@
+    @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
+    :root {
+      --primary: #000000;
+      --secondary: #606060;
+      --accent: #3366ff;
+      --bg: #ffffff;
+      --card-bg: #f9f9f9;
+      --border: #eaeaea;
+      --fs-h1: clamp(2.5rem, 5vw + 1rem, 4rem);
+      --fs-h2: clamp(1.8rem, 3vw + 1rem, 2.5rem);
+      --fs-body: clamp(1rem, 0.5vw + 0.8rem, 1.15rem);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Inter", sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    nav {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-img {
+      height: 40px;
+      width: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .logo-text {
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -1px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--secondary);
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .hero {
+      padding: 100px 0;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: var(--fs-h1);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      letter-spacing: -2px;
+    }
+
+    .hero p {
+      font-size: var(--fs-body);
+      color: var(--secondary);
+      max-width: 700px;
+      margin: 0 auto 40px;
+    }
+
+    .cta-group {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: 1px solid var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: white;
+      color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      margin: 60px 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 40px;
+      border-radius: 24px;
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+    }
+
+    .card i {
+      font-size: 32px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .card h3 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .card p {
+      color: var(--secondary);
+      font-size: 15px;
+    }
+
+    .card.upcoming {
+      opacity: 0.6;
+      border-style: dashed;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #eee;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+    }
+
+    .about-creator {
+      background: #000;
+      color: #fff;
+      padding: 80px 0;
+      border-radius: 40px;
+      margin: 80px 0;
+    }
+
+    .about-flex {
+      display: flex;
+      align-items: center;
+      gap: 60px;
+      flex-wrap: wrap;
+    }
+
+    .about-content {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .about-content h2 {
+      font-size: var(--fs-h2);
+      margin-bottom: 20px;
+    }
+
+    .about-content p {
+      opacity: 0.8;
+      margin-bottom: 30px;
+    }
+
+    .hire-box {
+      background: #1a1a1a;
+      padding: 30px;
+      border-radius: 20px;
+      border: 1px solid #333;
+    }
+
+    footer {
+      padding: 60px 0;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      color: var(--secondary);
+    }
+
+    @media (max-width: 768px) {
+      .cta-group {
+        flex-direction: column;
+      }
+      .about-flex {
+        text-align: center;
+        justify-content: center;
+      }
+    }

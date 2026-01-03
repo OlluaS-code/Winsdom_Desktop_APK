@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geografia && História</title>
+  <link rel="stylesheet" href="assets/GeoHistoria.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+  <div id="app-container">
+    <nav class="top-nav">
+      <button class="nav-btn active">Quadro Branco</button>
+    </nav>
+
+    <div id="canvas-container">
+      <canvas id="whiteboard"></canvas>
+
+      <div id="text-container-proxy">
+        <textarea id="text-input" spellcheck="false" rows="1"></textarea>
+      </div>
+
+      <aside class="sidebar">
+        <div class="tool-group">
+          <div class="tool-btn active" data-tool="pen" title="Caneta (P)">
+            <i data-lucide="pencil"></i>
+          </div>
+          <div class="tool-btn" data-tool="text" title="Texto (T)">
+            <i data-lucide="type"></i>
+          </div>
+          <div class="tool-btn" data-tool="eraser" title="Borracha (E)">
+            <i data-lucide="eraser"></i>
+          </div>
+        </div>
+
+        <div class="tool-group">
+          <div class="color-picker active" style="background-color: #1e293b;" data-color="#1e293b"></div>
+          <div class="color-picker" style="background-color: #ef4444;" data-color="#ef4444"></div>
+          <div class="color-picker" style="background-color: #3b82f6;" data-color="#3b82f6"></div>
+          <div class="color-picker" style="background-color: #22c55e;" data-color="#22c55e"></div>
+        </div>
+
+        <div class="tool-group">
+          <input type="range" min="12" max="80" value="20" id="font-size" class="size-slider">
+          <span id="size-label">20px</span>
+        </div>
+
+        <div class="tool-group">
+          <div class="submenu-container">
+            <div class="tool-btn" id="btn-edit">
+              <i data-lucide="sliders-horizontal"></i>
+            </div>
+            <div class="submenu" id="menu-edit">
+              <div class="submenu-item" onclick="app.undo()">Desfazer <span class="shortcut">Ctrl+Z</span></div>
+              <div class="submenu-item" onclick="app.redo()">Refazer <span class="shortcut">Ctrl+Y</span></div>
+              <div class="separator"></div>
+              <div class="submenu-item" onclick="app.clear()" style="color: #ef4444;">Limpar Tudo</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="scripts/Whiteboard.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+node_modules
+yarn.lock
+.env
+.env.test
+
+# Electron-builder artifacts
+dist_installer/
+dist/
+win-unpacked/

@@ -1,0 +1,38 @@
+{
+  "name": "winsdom",
+  "version": "1.0.0",
+  "main": "src/main.js",
+  "author": "Saullo Moura Tavares",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron . --dev",
+    "generate-icons": "electron-icon-maker --input=./public/img/Winsdom.png --output=./public/img/icons",
+    "dist": "electron-builder --win",
+    "publish-win": "electron-builder --win -p always"
+  },
+    "build": {
+    "appId": "com.winsdom.app",
+    "productName": "Winsdom",
+    "directories": {
+      "output": "dist_installer"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "public/img/icons/icons/win/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Winsdom"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "seu-usuario-github",
+        "repo": "seu-repositorio"
+      }
+    ]
+  }
+}
