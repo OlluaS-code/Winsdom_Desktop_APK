@@ -1,6 +1,10 @@
 {
   "name": "winsdom",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OlluaS-code/Winsdom_Desktop_APK.git"
+  },
   "main": "src/main.js",
   "author": "Saullo Moura Tavares",
   "license": "MIT",
@@ -30,9 +34,18 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "seu-usuario-github",
-        "repo": "seu-repositorio"
+        "owner": "OlluaS-code",
+        "repo": "Winsdom_Desktop_APK"
       }
     ]
+  },
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
+    "electron-icon-maker": "^0.0.5",
+    "update-electron-app": "^3.0.0"
+  },
+  "dependencies": {
+    "electron-reload": "^2.0.0-alpha.1"
   }
 }

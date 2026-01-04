@@ -6,65 +6,186 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Biologia</title>
   <link rel="stylesheet" href="assets/Biology.css">
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
 
 <body>
 
-  <div id="app-container">
-    <nav class="top-nav">
-      <button class="nav-btn active">Quadro Branco</button>
-    </nav>
 
-    <div id="canvas-container">
-      <canvas id="whiteboard"></canvas>
+  <!-- Navegação Global -->
+  <nav class="main-nav">
+    <div class="flex items-center gap-3">
+      <div><img src="../public/img/Winsdom.png" alt="Logo Winsdom" class="logo-img"></div>
+      <h1 class="font-bold text-xl text-gray-800 tracking-tight">Winsdom</h1>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="switchTab('mindmap')" class="nav-btn-tab" id="btn-mindmap"><i class="fas fa-project-diagram"></i>
+        Mapa</button>
+      <button onclick="switchTab('flashcards')" class="nav-btn-tab" id="btn-flashcards"><i
+          class="fas fa-layer-group"></i> Cards</button>
+      <button onclick="switchTab('whiteboard')" class="nav-btn-tab active-tab" id="btn-whiteboard"><i
+          class="fas fa-pen-to-square"></i> Quadro</button>
+      <button onclick="switchTab('glossary')" class="nav-btn-tab" id="btn-glossary"><i class="fas fa-book"></i>
+        Glossário</button>
+    </div>
+  </nav>
 
-      <div id="text-container-proxy">
-        <textarea id="text-input" spellcheck="false" rows="1"></textarea>
+  <main class="flex-1 relative overflow-hidden bg-gray-50">
+
+    <!-- SEÇÃO: MAPA MENTAL -->
+    <section id="mindmap" class="absolute inset-0 tab-content hidden">
+      <div
+        class="absolute top-4 left-4 z-10 bg-white p-2 rounded-lg shadow-md flex flex-col gap-2 border border-gray-100">
+        <button onclick="addRootNode()" class="p-2 hover:bg-indigo-50 text-indigo-600 rounded transition-colors"
+          title="Adicionar Nó Raiz"><i class="fas fa-plus-circle"></i></button>
+        <button onclick="clearMindMap()" class="p-2 hover:bg-red-50 text-red-500 rounded transition-colors"
+          title="Limpar"><i class="fas fa-trash"></i></button>
+        <div class="text-xs text-gray-400 px-2 mt-2 border-t pt-2 font-mono">
+          <p>Arrastar: Mover</p>
+          <p>2x Clique: Editar</p>
+          <p>Btn Dir: +Filho</p>
+        </div>
       </div>
+      <canvas id="mm-canvas" class="w-full h-full bg-slate-50 cursor-move"></canvas>
+    </section>
 
-      <aside class="sidebar">
-        <div class="tool-group">
-          <div class="tool-btn active" data-tool="pen" title="Caneta (P)">
-            <i data-lucide="pencil"></i>
-          </div>
-          <div class="tool-btn" data-tool="text" title="Texto (T)">
-            <i data-lucide="type"></i>
-          </div>
-          <div class="tool-btn" data-tool="eraser" title="Borracha (E)">
-            <i data-lucide="eraser"></i>
-          </div>
+    <!-- SEÇÃO: FLASHCARDS -->
+    <section id="flashcards" class="absolute inset-0 tab-content hidden overflow-y-auto p-8 bg-gray-50">
+      <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+          <h2 class="text-2xl font-bold text-gray-800">Decks de Estudo</h2>
+          <button onclick="toggleModal('fc-modal')"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition-all">
+            <i class="fas fa-plus"></i> Novo Card
+          </button>
         </div>
+        <div id="fc-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20"></div>
+      </div>
+    </section>
 
-        <div class="tool-group">
-          <div class="color-picker active" style="background-color: #1e293b;" data-color="#1e293b"></div>
-          <div class="color-picker" style="background-color: #ef4444;" data-color="#ef4444"></div>
-          <div class="color-picker" style="background-color: #3b82f6;" data-color="#3b82f6"></div>
-          <div class="color-picker" style="background-color: #22c55e;" data-color="#22c55e"></div>
+    <!-- SEÇÃO: GLOSSÁRIO -->
+    <section id="glossary" class="absolute inset-0 tab-content hidden overflow-hidden flex flex-col bg-white">
+      <div class="max-w-4xl mx-auto w-full flex-1 flex flex-col p-8">
+        <div class="flex gap-4 mb-6">
+          <div class="relative flex-1">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            <input type="text" id="gl-search" placeholder="Buscar definição..."
+              class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all">
+          </div>
+          <button onclick="toggleModal('gl-modal')"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 rounded-xl shadow-md transition-colors font-medium">
+            Adicionar
+          </button>
         </div>
+        <div id="gl-list" class="flex-1 overflow-y-auto pr-2 space-y-3"></div>
+      </div>
+    </section>
 
-        <div class="tool-group">
-          <input type="range" min="12" max="80" value="20" id="font-size" class="size-slider">
-          <span id="size-label">20px</span>
-        </div>
+    <!-- SEÇÃO: WHITEBOARD -->
+    <section id="whiteboard" class="absolute inset-0 tab-content block">
+      <div id="app-container">
+        <!-- Top Nav Interna -->
 
-        <div class="tool-group">
-          <div class="submenu-container">
-            <div class="tool-btn" id="btn-edit">
-              <i data-lucide="sliders-horizontal"></i>
+        <div id="canvas-container">
+          <canvas id="wb-canvas"></canvas>
+
+          <!-- Proxy para input de texto -->
+          <div id="text-container-proxy">
+            <textarea id="text-input" spellcheck="false" rows="1"></textarea>
+          </div>
+
+          <!-- Sidebar lateral (Agora na esquerda, estilo Biology) -->
+          <aside class="sidebar">
+            <div class="tool-group">
+              <div class="tool-btn active" data-tool="pen" title="Caneta (P)" onclick="wbApp.setTool('pen')">
+                <i data-lucide="pencil"></i>
+              </div>
+              <div class="tool-btn" data-tool="text" title="Texto (T)" onclick="wbApp.setTool('text')">
+                <i data-lucide="type"></i>
+              </div>
+              <div class="tool-btn" data-tool="eraser" title="Borracha (E)" onclick="wbApp.setTool('eraser')">
+                <i data-lucide="eraser"></i>
+              </div>
             </div>
-            <div class="submenu" id="menu-edit">
-              <div class="submenu-item" onclick="app.undo()">Desfazer <span class="shortcut">Ctrl+Z</span></div>
-              <div class="submenu-item" onclick="app.redo()">Refazer <span class="shortcut">Ctrl+Y</span></div>
-              <div class="separator"></div>
-              <div class="submenu-item" onclick="app.clear()" style="color: #ef4444;">Limpar Tudo</div>
+
+            <div class="tool-group">
+              <div class="color-picker active" style="background-color: #1e293b;" data-color="#1e293b"
+                onclick="wbApp.setColor('#1e293b', this)"></div>
+              <div class="color-picker" style="background-color: #ef4444;" data-color="#ef4444"
+                onclick="wbApp.setColor('#ef4444', this)"></div>
+              <div class="color-picker" style="background-color: #3b82f6;" data-color="#3b82f6"
+                onclick="wbApp.setColor('#3b82f6', this)"></div>
+              <div class="color-picker" style="background-color: #22c55e;" data-color="#22c55e"
+                onclick="wbApp.setColor('#22c55e', this)"></div>
             </div>
-          </div>
+
+            <div class="tool-group">
+              <!-- Slider vertical -->
+              <input type="range" min="12" max="80" value="20" id="font-size" class="size-slider"
+                oninput="wbApp.setSize(this.value)">
+              <span id="size-label">20px</span>
+            </div>
+
+            <div class="tool-group">
+              <div class="submenu-container">
+                <div class="tool-btn" id="btn-edit" onclick="wbApp.toggleMenu()">
+                  <i data-lucide="sliders-horizontal"></i>
+                </div>
+                <div class="submenu" id="menu-edit">
+                  <div class="submenu-item" onclick="wbApp.undo()">Desfazer <span class="shortcut">Ctrl+Z</span></div>
+                  <div class="submenu-item" onclick="wbApp.redo()">Refazer <span class="shortcut">Ctrl+Y</span></div>
+                  <div class="separator"></div>
+                  <div class="submenu-item" onclick="wbApp.clear()" style="color: #ef4444;">Limpar Tudo</div>
+                </div>
+              </div>
+            </div>
+          </aside>
         </div>
-      </aside>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modais -->
+  <div id="fc-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 class="text-lg font-bold mb-4 text-gray-800">Novo Flashcard</h3>
+      <input id="fc-front" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+        placeholder="Frente (Pergunta)">
+      <textarea id="fc-back"
+        class="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none h-32 resize-none"
+        placeholder="Verso (Resposta)"></textarea>
+      <div class="flex justify-end gap-3">
+        <button onclick="toggleModal('fc-modal')"
+          class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancelar</button>
+        <button onclick="addFlashcard()"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
+      </div>
     </div>
   </div>
 
+  <div id="gl-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h3 class="text-lg font-bold mb-4 text-gray-800">Novo Termo</h3>
+      <input id="gl-term" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+        placeholder="Termo">
+      <textarea id="gl-def"
+        class="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none h-32 resize-none"
+        placeholder="Definição completa..."></textarea>
+      <div class="flex justify-end gap-3">
+        <button onclick="toggleModal('gl-modal')"
+          class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg">Cancelar</button>
+        <button onclick="addGlossaryTerm()"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="scripts/Biology.js"></script>
   <script src="scripts/Whiteboard.js"></script>
 </body>
 
