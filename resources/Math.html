@@ -28,11 +28,27 @@
 </head>
 
 <body>
+
   <div id="app-container">
-    <nav class="top-nav">
-      <button class="nav-btn active" data-view="whiteboard">Quadro Branco</button>
-      <button class="nav-btn" data-view="editor">Editor LaTeX</button>
-      <button class="nav-btn" data-view="calculator">Calculadora</button>
+
+    <!-- Navegação Global -->
+    <nav class="main-nav">
+      <div class="nav-brand">
+        <img src="../public/img/Winsdom.png" alt="Logo Winsdom" class="logo-img">
+        <h1 class="brand-title">Winsdom</h1>
+      </div>
+
+      <div class="nav-links">
+        <button class="nav-btn-tab" data-view="editor" id="btn-preview">
+          <i class="fas fa-eye"></i> Preview
+        </button>
+        <button class="nav-btn-tab" data-view="calculator" id="btn-calculator">
+          <i class="fas fa-calculator"></i> Calculadora
+        </button>
+        <button class="nav-btn-tab active-tab" data-view="whiteboard" id="btn-whiteboard">
+          <i class="fas fa-pen-to-square"></i> Quadro
+        </button>
+      </div>
     </nav>
 
     <section id="view-whiteboard" class="view">
