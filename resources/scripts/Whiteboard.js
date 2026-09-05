@@ -1,20 +1,15 @@
-class Whiteboard {
+class WhiteboardUI {
     constructor() {
         this.canvas = document.getElementById('whiteboard');
-        this.ctx = this.canvas.getContext('2d');
-        this.textInput = document.getElementById('text-input');
+        this.engine = new window.WhiteboardEngine(this.canvas);
         
+        this.textInput = document.getElementById('text-input');
         this.textContainer = document.createElement('div');
         this.setupTextContainer();
 
-        this.isDrawing = false;
         this.currentTool = 'pen';
         this.currentColor = '#1e293b';
-        this.currentSize = 3;
         this.fontSize = 20;
-        
-        this.history = [];
-        this.redoStack = [];
         this.isDraggingText = false;
         
         this.init();
@@ -33,10 +28,10 @@ class Whiteboard {
     }
 
     init() {
-        lucide.createIcons();
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         
+        // Let the engine handle drawing events
+        // We only intercept text tool actions
         this.canvas.addEventListener('mousedown', (e) => this.startAction(e));
         window.addEventListener('mousemove', (e) => this.handleGlobalMove(e));
         window.addEventListener('mouseup', () => this.stopAction());
@@ -58,12 +53,7 @@ class Whiteboard {
     }
 
     resize() {
-        const temp = this.ctx.getImageData(0,0,this.canvas.width, this.canvas.height);
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.ctx.lineCap = 'round';
-        this.ctx.lineJoin = 'round';
-        this.ctx.putImageData(temp, 0, 0);
+        if (this.engine) this.engine.initDpiAwareCanvas();
     }
 
     setupTools() {
@@ -73,6 +63,14 @@ class Whiteboard {
                 document.querySelector('.tool-btn.active')?.classList.remove('active');
                 btn.classList.add('active');
                 this.currentTool = btn.dataset.tool;
+                
+                // Update engine
+                this.engine.tool = this.currentTool;
+                if (this.currentTool === 'text') {
+                    this.canvas.style.cursor = 'text';
+                } else {
+                    this.canvas.style.cursor = 'crosshair';
+                }
             });
         });
 
@@ -80,6 +78,7 @@ class Whiteboard {
         if (sizeSlider) {
             sizeSlider.addEventListener('input', (e) => {
                 this.fontSize = e.target.value;
+                this.engine.strokeSize = parseInt(this.fontSize);
                 this.textInput.style.fontSize = this.fontSize + 'px';
                 document.getElementById('size-label').innerText = this.fontSize + 'px';
             });
@@ -92,6 +91,7 @@ class Whiteboard {
                 document.querySelector('.color-picker.active')?.classList.remove('active');
                 btn.classList.add('active');
                 this.currentColor = btn.dataset.color;
+                this.engine.strokeColor = this.currentColor;
                 this.textInput.style.color = this.currentColor;
                 if(this.currentTool === 'eraser') document.querySelector('[data-tool="pen"]').click();
             });
@@ -101,13 +101,15 @@ class Whiteboard {
     setupMenu() {
         const btn = document.getElementById('btn-edit');
         const menu = document.getElementById('menu-edit');
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            menu.classList.toggle('show');
-        });
-        document.addEventListener('click', (e) => {
-            if (!menu.contains(e.target) && !btn.contains(e.target)) menu.classList.remove('show');
-        });
+        if (btn && menu) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                menu.classList.toggle('show');
+            });
+            document.addEventListener('click', (e) => {
+                if (!menu.contains(e.target) && !btn.contains(e.target)) menu.classList.remove('show');
+            });
+        }
     }
 
     setupTextTool() {
@@ -134,28 +136,19 @@ class Whiteboard {
             } else {
                 this.startText(e.clientX, e.clientY);
             }
-            return;
+            // Stop propagation so the engine doesn't start drawing lines for text clicks
+            e.stopPropagation(); 
         }
-        this.isDrawing = true;
-        this.saveState();
-        this.ctx.beginPath();
-        this.ctx.moveTo(e.clientX, e.clientY);
-        this.ctx.strokeStyle = this.currentTool === 'eraser' ? '#f8fafc' : this.currentColor;
-        this.ctx.lineWidth = this.currentTool === 'eraser' ? 40 : this.currentSize;
     }
 
     handleGlobalMove(e) {
         if (this.isDraggingText) {
             this.textContainer.style.left = (e.clientX - this.offsetX) + 'px';
             this.textContainer.style.top = (e.clientY - this.offsetY) + 'px';
-        } else if (this.isDrawing) {
-            this.ctx.lineTo(e.clientX, e.clientY);
-            this.ctx.stroke();
         }
     }
 
     stopAction() {
-        this.isDrawing = false;
         this.isDraggingText = false;
     }
 
@@ -172,39 +165,51 @@ class Whiteboard {
     finalizeText() {
         const text = this.textInput.value.trim();
         if (text && this.textContainer.style.display === 'block') {
-            this.saveState();
-            this.ctx.font = `${this.fontSize}px Inter`;
-            this.ctx.fillStyle = this.currentColor;
             const rect = this.textContainer.getBoundingClientRect();
-            this.ctx.fillText(text, rect.left + 5, rect.top + parseInt(this.fontSize) + 2);
+            const canvasRect = this.canvas.getBoundingClientRect();
+            
+            // Calculate logical position
+            const logicalX = rect.left - canvasRect.left + 5;
+            const logicalY = rect.top - canvasRect.top + 5;
+
+            // Push text command to engine
+            this.engine.commands.push({
+                type: 'text',
+                text: text,
+                color: this.currentColor,
+                size: this.fontSize,
+                pos: { x: logicalX, y: logicalY }
+            });
+            this.engine.undoneCommands = [];
+            this.engine.redrawAll();
         }
         this.textContainer.style.display = 'none';
     }
 
-    saveState() {
-        this.history.push(this.ctx.getImageData(0,0,this.canvas.width, this.canvas.height));
-        if (this.history.length > 50) this.history.shift();
-        this.redoStack = [];
-    }
-
     undo() {
-        if (this.history.length > 0) {
-            this.redoStack.push(this.ctx.getImageData(0,0,this.canvas.width, this.canvas.height));
-            this.ctx.putImageData(this.history.pop(), 0, 0);
-        }
+        this.engine.undo();
     }
 
     redo() {
-        if (this.redoStack.length > 0) {
-            this.history.push(this.ctx.getImageData(0,0,this.canvas.width, this.canvas.height));
-            this.ctx.putImageData(this.redoStack.pop(), 0, 0);
-        }
+        this.engine.redo();
     }
 
     clear() {
-        this.saveState();
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.engine.clear();
+    }
+
+    cut() {
+        // stub
+    }
+
+    copy() {
+        // stub
+    }
+
+    paste() {
+        // stub
     }
 }
 
-window.app = new Whiteboard();
+// Global reference expected by UI onclicks in Math.html
+window.app = new WhiteboardUI();

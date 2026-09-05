@@ -9,6 +9,14 @@ const {
   shell,
 } = require("electron");
 const path = require("path");
+const fs = require("fs/promises");
+
+// 1. Garantir Instância Única
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
 
 if (process.argv[2] === "--dev") {
   const rootPath = path.join(__dirname, "..");
@@ -29,6 +37,7 @@ if (process.argv[2] === "--dev") {
 }
 
 let tray = null;
+const openWindows = new Map();
 
 function setWindowMenu(window, discipline) {
   let template = [
@@ -102,75 +111,84 @@ function setWindowMenu(window, discipline) {
   window.setMenu(menu);
 }
 
-function handleExternalLinks(window) {
-  window.webContents.on("will-navigate", (event, url) => {
-    if (url.startsWith("http")) {
-      event.preventDefault();
-      shell.openExternal(url);
-    }
-  });
-
+// 2. Interceptador Central de Links Externos
+function setupSecurityGuards(window) {
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("http")) {
+    if (url.startsWith("https:") || url.startsWith("http:")) {
       shell.openExternal(url);
       return { action: "deny" };
     }
-    return { action: "allow" };
+    return { action: "deny" };
+  });
+
+  window.webContents.on("will-navigate", (event, url) => {
+    if (url !== window.webContents.getURL()) {
+      event.preventDefault();
+      if (url.startsWith("https:") || url.startsWith("http:")) {
+        shell.openExternal(url);
+      }
+    }
   });
 }
 
-function createStudyWindow(fileName, discipline) {
-  nativeTheme.themeSource = "system";
-  const iconlogo = path.join(__dirname, "../public/img/Winsdom.png");
+// 3. Fábrica de Janelas com Controle de Ciclo de Vida
+function createOrFocusWindow(moduleId, htmlFile, discipline, windowOptions = {}) {
+  if (openWindows.has(moduleId)) {
+    const existingWin = openWindows.get(moduleId);
+    if (!existingWin.isDestroyed()) {
+      existingWin.show();
+      existingWin.focus();
+      return existingWin;
+    }
+    openWindows.delete(moduleId);
+  }
 
+  nativeTheme.themeSource = "system";
   const win = new BrowserWindow({
     width: 900,
     height: 700,
-    icon: iconlogo,
-    alwaysOnTop: true,
+    show: false, // Previne visualização de tela branca antes do DOM renderizar
+    backgroundColor: "#f8fafc",
+    icon: path.join(__dirname, "../public/img/Winsdom.png"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
     },
+    ...windowOptions,
   });
 
-  win.loadFile(path.join(__dirname, fileName));
-  setWindowMenu(win, discipline);
+  setupSecurityGuards(win);
+
+  win.loadFile(path.join(__dirname, `../resources/${htmlFile}`));
+
+  if (discipline) {
+    setWindowMenu(win, discipline);
+  } else {
+    win.autoHideMenuBar = true;
+    win.setMenu(null);
+  }
+
+  win.once("ready-to-show", () => {
+    win.show();
+  });
+
+  win.on("closed", () => {
+    openWindows.delete(moduleId);
+  });
+
+  openWindows.set(moduleId, win);
   return win;
 }
 
-function AboutWindow(fileName) {
-  nativeTheme.themeSource = "system";
-  const iconlogo = path.join(__dirname, "../public/img/Winsdom.png");
-
-  const winAbout = new BrowserWindow({
-    width: 900,
-    height: 700,
-    icon: iconlogo,
-    alwaysOnTop: true,
-    autoHideMenuBar: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"),
-    },
-  });
-
-  handleExternalLinks(winAbout);
-
-  winAbout.loadFile(path.join(__dirname, fileName));
-  return winAbout;
-}
-
 function About() {
-  AboutWindow("../resources/About.html");
+  createOrFocusWindow("about", "About.html", null);
 }
 function Biology() {
-  createStudyWindow("../resources/Biology.html", "Biology");
+  createOrFocusWindow("biology", "Biology.html", "Biology");
 }
 function MathWindow() {
-  createStudyWindow("../resources/Math.html", "Math");
+  createOrFocusWindow("math", "Math.html", "Math");
 }
 
 app.whenReady().then(() => {
@@ -184,7 +202,6 @@ app.whenReady().then(() => {
       { type: "separator" },
       { label: "Biologia", click: Biology },
       { label: "Matemática", click: MathWindow },
-
       { type: "separator" },
       { label: "Sair de todos", click: () => app.quit() },
     ]);
@@ -198,18 +215,47 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
+    // Mantemos aberto porque o tray está gerenciando
   }
 });
 
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) About();
+  if (openWindows.size === 0) About();
 });
 
+// 4. Operações Atômicas de Persistência via IPC Invoke/Handle
+ipcMain.handle("storage:write", async (_event, { filename, payload }) => {
+  try {
+    const sanitizedFilename = path.basename(filename).replace(/[^a-zA-Z0-9_-]/g, "");
+    const targetDir = path.join(app.getPath("userData"), "app_data");
+    await fs.mkdir(targetDir, { recursive: true });
+    
+    const filePath = path.join(targetDir, `${sanitizedFilename}.json`);
+    await fs.writeFile(filePath, JSON.stringify(payload, null, 2), "utf-8");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("storage:read", async (_event, filename) => {
+  try {
+    const sanitizedFilename = path.basename(filename).replace(/[^a-zA-Z0-9_-]/g, "");
+    const filePath = path.join(app.getPath("userData"), "app_data", `${sanitizedFilename}.json`);
+    const data = await fs.readFile(filePath, "utf-8");
+    return { success: true, data: JSON.parse(data) };
+  } catch (error) {
+    if (error.code === "ENOENT") return { success: true, data: null };
+    return { success: false, error: error.message };
+  }
+});
+
+// Legacy fallback para não quebrar módulos que ainda não foram atualizados
 ipcMain.on("save-data", (event, data) => {
-  const fs = require("fs");
+  const fsSync = require("fs");
   const userDataPath = app.getPath("userData");
   const filePath = path.join(userDataPath, `${data.category}-data.json`);
-  fs.writeFile(filePath, JSON.stringify(data.content, null, 2), (err) => {
+  fsSync.writeFile(filePath, JSON.stringify(data.content, null, 2), (err) => {
     if (err) console.error(err);
   });
 });

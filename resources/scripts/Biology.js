@@ -83,80 +83,28 @@ function toggleModal(id) {
   }
 }
 
+let engine = null;
+
 const wbApp = {
-  canvas: document.getElementById("wb-canvas"),
-  ctx: null,
-  textProxy: document.getElementById("text-container-proxy"),
-  textInput: document.getElementById("text-input"),
-
-  tool: "pen",
-  color: "#1e293b",
-  size: 20,
-  isDrawing: false,
-  history: [],
-  historyStep: -1,
-
   init() {
-    this.ctx = this.canvas.getContext("2d");
-    this.resize();
-    window.addEventListener("resize", () => this.resize());
-
-    this.canvas.addEventListener("mousedown", (e) => this.startDraw(e));
-    this.canvas.addEventListener("mousemove", (e) => this.draw(e));
-    this.canvas.addEventListener("mouseup", () => this.stopDraw());
-    this.canvas.addEventListener("mouseout", () => this.stopDraw());
-
-    document.addEventListener("keydown", (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-        e.preventDefault();
-        this.undo();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "y") {
-        e.preventDefault();
-        this.redo();
-      }
-    });
-
-    this.textInput.addEventListener("blur", () => this.finishText());
-    this.textInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        this.textInput.blur();
-      }
-    });
-
-    this.saveState();
+    const canvas = document.getElementById("wb-canvas");
+    engine = new window.WhiteboardEngine(canvas);
   },
 
   resize() {
-    const parent = this.canvas.parentElement;
-    const tempCanvas = document.createElement("canvas");
-    tempCanvas.width = this.canvas.width;
-    tempCanvas.height = this.canvas.height;
-    const tempCtx = tempCanvas.getContext("2d");
-    if (this.canvas.width > 0) tempCtx.drawImage(this.canvas, 0, 0);
-
-    this.canvas.width = parent.clientWidth;
-    this.canvas.height = parent.clientHeight;
-
-    this.ctx.lineCap = "round";
-    this.ctx.lineJoin = "round";
-    this.ctx.drawImage(tempCanvas, 0, 0);
+    if (engine) engine.initDpiAwareCanvas();
   },
 
   setTool(toolName) {
-    this.tool = toolName;
+    if (engine) engine.tool = toolName;
     document
       .querySelectorAll(".tool-btn")
       .forEach((b) => b.classList.remove("active"));
     document.querySelector(`[data-tool="${toolName}"]`).classList.add("active");
-
-    if (toolName === "text") this.canvas.style.cursor = "text";
-    else this.canvas.style.cursor = "crosshair";
   },
 
   setColor(colorCode, element) {
-    this.color = colorCode;
+    if (engine) engine.strokeColor = colorCode;
     document
       .querySelectorAll(".color-picker")
       .forEach((c) => c.classList.remove("active"));
@@ -164,114 +112,20 @@ const wbApp = {
   },
 
   setSize(val) {
-    this.size = parseInt(val);
+    if (engine) engine.strokeSize = parseInt(val);
     document.getElementById("size-label").innerText = val + "px";
   },
 
-  startDraw(e) {
-    if (this.tool === "text") {
-      this.startText(e);
-      return;
-    }
-    this.isDrawing = true;
-    this.ctx.beginPath();
-    const { x, y } = this.getPos(e);
-    this.ctx.moveTo(x, y);
-  },
-
-  draw(e) {
-    if (!this.isDrawing || this.tool === "text") return;
-    const { x, y } = this.getPos(e);
-
-    this.ctx.lineWidth = this.tool === "eraser" ? this.size * 2 : this.size / 5;
-    this.ctx.strokeStyle = this.tool === "eraser" ? "#f8fafc" : this.color;
-
-    this.ctx.lineTo(x, y);
-    this.ctx.stroke();
-  },
-
-  stopDraw() {
-    if (this.isDrawing) {
-      this.isDrawing = false;
-      this.ctx.closePath();
-      this.saveState();
-    }
-  },
-
-  startText(e) {
-    const { x, y } = this.getPos(e);
-
-    this.textProxy.style.display = "block";
-    this.textProxy.style.left = x + "px";
-    this.textProxy.style.top = y + "px";
-
-    this.textInput.value = "";
-    this.textInput.style.color = this.color;
-    this.textInput.style.fontSize = this.size + "px";
-    this.textInput.style.minWidth = this.size * 2 + "px";
-    this.textInput.style.height = this.size * 1.5 + "px";
-
-    setTimeout(() => this.textInput.focus(), 10);
-  },
-
-  finishText() {
-    if (this.textProxy.style.display === "none") return;
-
-    const text = this.textInput.value;
-    if (text.trim() !== "") {
-      const x = parseInt(this.textProxy.style.left);
-      const y = parseInt(this.textProxy.style.top);
-      const fontSize = parseInt(this.textInput.style.fontSize);
-
-      this.ctx.font = `${fontSize}px Inter`;
-      this.ctx.fillStyle = this.textInput.style.color;
-      this.ctx.textBaseline = "top";
-      this.ctx.fillText(text, x, y);
-      this.saveState();
-    }
-
-    this.textProxy.style.display = "none";
-  },
-
-  getPos(e) {
-    const rect = this.canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  },
-
-  saveState() {
-    if (this.historyStep < this.history.length - 1) {
-      this.history = this.history.slice(0, this.historyStep + 1);
-    }
-    this.history.push(this.canvas.toDataURL());
-    this.historyStep++;
-  },
-
   undo() {
-    if (this.historyStep > 0) {
-      this.historyStep--;
-      this.restoreState();
-    }
+    if (engine) engine.undo();
   },
 
   redo() {
-    if (this.historyStep < this.history.length - 1) {
-      this.historyStep++;
-      this.restoreState();
-    }
-  },
-
-  restoreState() {
-    const img = new Image();
-    img.src = this.history[this.historyStep];
-    img.onload = () => {
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.drawImage(img, 0, 0);
-    };
+    if (engine) engine.redo();
   },
 
   clear() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.saveState();
+    if (engine) engine.clear();
     this.toggleMenu();
   },
 
@@ -501,37 +355,82 @@ function clearMindMap() {
   }
 }
 
+const fsrs = window.FSRSEngine ? new window.FSRSEngine() : null;
 let flashcards = JSON.parse(localStorage.getItem("fc_cards")) || [];
+
 function renderFlashcards() {
   const grid = document.getElementById("fc-grid");
   grid.innerHTML = "";
+  
+  // Ordena para que os cards atrasados (due < agora) ou novos (state === 'NEW') apareçam primeiro
+  const now = Date.now();
+  flashcards.sort((a, b) => {
+    if (a.state === 'NEW' && b.state !== 'NEW') return -1;
+    if (b.state === 'NEW' && a.state !== 'NEW') return 1;
+    return (a.due || 0) - (b.due || 0);
+  });
+
   flashcards.forEach((card, index) => {
+    // Verifica se o card está pronto para revisão
+    const isDue = !card.due || card.due <= now;
+    const dueBadge = isDue ? `<span class="absolute top-3 left-3 bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-bold">Para Revisão</span>` : `<span class="absolute top-3 left-3 bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full font-bold">Em Dia</span>`;
+
     grid.innerHTML += `
-                    <div class="group h-64 w-full cursor-pointer perspective-1000">
-                        <div class="relative w-full h-full text-center transition-all duration-500 transform-style-3d group-hover:shadow-xl rounded-xl" onclick="this.classList.toggle('rotate-y-180')">
-                            <div class="absolute inset-0 backface-hidden bg-white border border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
-                                <span class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">Pergunta</span>
-                                <p class="text-lg font-medium text-gray-800">${card.front}</p>
-                                <button onclick="deleteFlashcard(event, ${index})" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 p-2"><i class="fas fa-trash"></i></button>
-                            </div>
-                            <div class="absolute inset-0 backface-hidden rotate-y-180 bg-indigo-600 rounded-xl p-6 flex flex-col items-center justify-center text-white shadow-sm">
-                                <span class="text-xs font-bold text-indigo-200 uppercase tracking-wider mb-2">Resposta</span>
-                                <p class="text-lg">${card.back}</p>
-                            </div>
-                        </div>
-                    </div>`;
+      <div class="group h-64 w-full cursor-pointer perspective-1000">
+          <div class="relative w-full h-full text-center transition-all duration-500 transform-style-3d group-hover:shadow-xl rounded-xl" onclick="this.classList.toggle('rotate-y-180')">
+              <div class="absolute inset-0 backface-hidden bg-white border border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center shadow-sm">
+                  ${dueBadge}
+                  <span class="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">Pergunta</span>
+                  <p class="text-lg font-medium text-gray-800">${card.front}</p>
+                  <button onclick="deleteFlashcard(event, ${index})" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 p-2"><i class="fas fa-trash"></i></button>
+              </div>
+              <div class="absolute inset-0 backface-hidden rotate-y-180 bg-indigo-600 rounded-xl p-4 flex flex-col items-center justify-center text-white shadow-sm">
+                  <span class="text-xs font-bold text-indigo-200 uppercase tracking-wider mb-2">Resposta</span>
+                  <p class="text-lg flex-1 flex items-center justify-center">${card.back}</p>
+                  
+                  <!-- Botões FSRS -->
+                  <div class="flex gap-2 w-full mt-2" onclick="event.stopPropagation()">
+                      <button onclick="gradeCard(event, ${index}, 1)" class="flex-1 bg-red-500 hover:bg-red-600 text-xs py-2 rounded font-bold shadow transition-colors">Errei (1)</button>
+                      <button onclick="gradeCard(event, ${index}, 2)" class="flex-1 bg-orange-500 hover:bg-orange-600 text-xs py-2 rounded font-bold shadow transition-colors">Difícil (2)</button>
+                      <button onclick="gradeCard(event, ${index}, 3)" class="flex-1 bg-blue-500 hover:bg-blue-600 text-xs py-2 rounded font-bold shadow transition-colors">Bom (3)</button>
+                      <button onclick="gradeCard(event, ${index}, 4)" class="flex-1 bg-green-500 hover:bg-green-600 text-xs py-2 rounded font-bold shadow transition-colors">Fácil (4)</button>
+                  </div>
+              </div>
+          </div>
+      </div>`;
   });
 }
+
+function gradeCard(e, index, grade) {
+  e.stopPropagation();
+  if (fsrs) {
+    flashcards[index] = fsrs.processReview(flashcards[index], grade);
+    localStorage.setItem("fc_cards", JSON.stringify(flashcards));
+    renderFlashcards();
+  }
+}
+
 function addFlashcard() {
   const front = document.getElementById("fc-front").value;
   const back = document.getElementById("fc-back").value;
   if (front && back) {
-    flashcards.push({ front, back });
+    flashcards.push({ 
+      front, 
+      back, 
+      state: 'NEW',
+      stability: 0,
+      difficulty: 0,
+      reps: 0,
+      lapses: 0,
+      lastReview: null,
+      due: Date.now()
+    });
     localStorage.setItem("fc_cards", JSON.stringify(flashcards));
     renderFlashcards();
     toggleModal("fc-modal");
   }
 }
+
 function deleteFlashcard(e, index) {
   e.stopPropagation();
   if (confirm("Apagar card?")) {

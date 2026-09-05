@@ -108,11 +108,18 @@
         displayTex = derived.toTex();
         plotExpression = derived.toString();
       } else {
-        const node = math.parse(inputVal);
-        plotExpression =
-          node.type === "FunctionAssignmentNode"
-            ? node.expr.toString()
-            : node.toString();
+        const safeCalc = new window.SafeCalculator();
+        const sanitized = safeCalc.normalizeExpression(inputVal);
+        const node = math.parse(sanitized);
+        
+        // Proteção de segurança (bloqueia variáveis maliciosas/atribuições)
+        node.traverse((n) => {
+          if (n.type === 'AssignmentNode' || n.type === 'FunctionAssignmentNode') {
+            throw new Error('Operação de atribuição não permitida na calculadora padrão.');
+          }
+        });
+
+        plotExpression = node.toString();
 
         try {
           const evaluated = node.evaluate();
@@ -157,35 +164,18 @@
     const grid = document.querySelector(".buttons-grid");
     let currentValue = "";
 
+    const safeCalc = new window.SafeCalculator();
     function evaluateResult() {
       try {
         if (currentValue.trim() === "") return;
-
-        let convertedValue = currentValue
-          .replace(/×/g, "*")
-          .replace(/÷/g, "/")
-          .replace(/(\d+\.?\d*)%/g, "($1/100)")
-          .replace(/\^/g, "**")
-          .replace(/π/g, "Math.PI")
-          .replace(/e/g, "Math.E")
-          .replace(/√/g, "Math.sqrt")
-          .replace(/(\d+\.?\d*|Math\.PI|Math\.E)º/g, "($1*Math.PI/180)")
-          .replace(/sin/g, "Math.sin")
-          .replace(/cos/g, "Math.cos")
-          .replace(/tan/g, "Math.tan")
-          .replace(/log/g, "Math.log10")
-          .replace(/ln/g, "Math.log");
-
-        const result = eval(convertedValue);
-
-        if (result === Infinity || isNaN(result)) {
+        // O SafeCalculator já trata ×, ÷, %, ^, π internamente
+        const res = safeCalc.evaluate(currentValue);
+        if (res.success) {
+          currentValue = res.result;
+          display.value = currentValue;
+        } else {
           display.value = "Erro";
           currentValue = "";
-        } else {
-          currentValue = Number.isInteger(result)
-            ? result.toString()
-            : parseFloat(result.toFixed(10)).toString();
-          display.value = currentValue;
         }
       } catch (error) {
         display.value = "Erro";

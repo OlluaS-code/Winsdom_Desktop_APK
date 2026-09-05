@@ -303,7 +303,7 @@ body {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .input-panel h3,
@@ -337,14 +337,13 @@ body {
 }
 
 #math-output {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  overflow-y: auto;
   color: #1e293b;
+  margin-bottom: 20px;
 }
 
 #error-display {
@@ -360,6 +359,7 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .toggle-control {
@@ -379,8 +379,9 @@ body {
 #plot-container {
   width: 100%;
   max-width: 500px;
-  margin: 20px auto;
-  min-height: 350px;
+  margin: 0 auto;
+  flex: 1;
+  min-height: 300px;
   background: #ffffff;
   border-radius: 8px;
   display: flex;

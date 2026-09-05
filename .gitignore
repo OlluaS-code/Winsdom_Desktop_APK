@@ -7,3 +7,4 @@ yarn.lock
 dist_installer/
 dist/
 win-unpacked/
+repomix-output.xml
