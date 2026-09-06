@@ -101,6 +101,24 @@ function setWindowMenu(window, discipline) {
         },
       ],
     },
+    IT: {
+      label: "Ferramentas de Modelagem",
+      submenu: [
+        {
+          label: "Exportar SQL (DDL)",
+          click: () => window.webContents.send("menu-action", "export-sql"),
+        },
+        {
+          label: "Exportar Imagem SVG",
+          click: () => window.webContents.send("menu-action", "export-svg"),
+        },
+        { type: "separator" },
+        {
+          label: "Transformar Conceitual → Lógico",
+          click: () => window.webContents.send("menu-action", "transform"),
+        },
+      ],
+    },
   };
 
   if (disciplineMenus[discipline]) {
@@ -190,6 +208,15 @@ function Biology() {
 function MathWindow() {
   createOrFocusWindow("math", "Math.html", "Math");
 }
+function ITWindow() {
+  createOrFocusWindow("it_modeler", "IT.html", "IT", {
+    width: 1280,
+    height: 850,
+    minWidth: 1024,
+    minHeight: 720,
+    title: "Winsdom - Arquitetura e Modelagem de Dados"
+  });
+}
 
 app.whenReady().then(() => {
   const iconPath = path.join(__dirname, "../public/img/WinsdomIcon.png");
@@ -202,6 +229,7 @@ app.whenReady().then(() => {
       { type: "separator" },
       { label: "Biologia", click: Biology },
       { label: "Matemática", click: MathWindow },
+      { label: "Modelagem de Dados (T.I.)", click: ITWindow },
       { type: "separator" },
       { label: "Sair de todos", click: () => app.quit() },
     ]);
