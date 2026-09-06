@@ -195,6 +195,7 @@
       document.getElementById('btnAddRel').addEventListener('click', () => this.addRelationship());
       document.getElementById('btnAddAttribute').addEventListener('click', () => this.addAttributeToSelected());
       document.getElementById('btnAddEdge').addEventListener('click', () => this.toggleEdgeMode());
+      document.getElementById('btnAddHierarchy').addEventListener('click', () => this.addHierarchy());
       
       const bCheck = document.getElementById('bitemporalCheck');
       if (bCheck) bCheck.addEventListener('change', () => this.updateSqlView());
@@ -322,6 +323,34 @@
       this.canvasViewport.style.cursor = this.edgeMode ? 'crosshair' : 'grab';
     }
 
+    addHierarchy() {
+      if (!this.selectedNodeId) {
+        alert('Selecione uma entidade pai antes de adicionar uma Herança (ISA).');
+        return;
+      }
+      const parentEntity = this.conceptualModel.entities.find(e => e.id === this.selectedNodeId);
+      if (!parentEntity) {
+        alert('Selecione uma entidade (não um relacionamento) para ser a super-entidade.');
+        return;
+      }
+      this.pushSnapshot();
+      const center = this.screenToGlobal(window.innerWidth / 2, window.innerHeight / 2);
+      const hierarchy = {
+        id: crypto.randomUUID(),
+        superEntityId: parentEntity.id,
+        subEntityIds: [],
+        type: 'exclusive',
+        strategy: 'TPT',
+        x: parentEntity.x + 20,
+        y: parentEntity.y + 140,
+        width: 80,
+        height: 50
+      };
+      this.conceptualModel.hierarchies.push(hierarchy);
+      this.render();
+      this.selectNode(hierarchy.id, 'hierarchy');
+    }
+
     handleNodeClickForEdge(nodeId) {
       if (!this.edgeMode) return false;
       if (!this.edgeSourceId) {
@@ -352,6 +381,7 @@
       this.conceptualModel.relationships = this.conceptualModel.relationships.filter(r => r.id !== id);
       this.conceptualModel.edges = this.conceptualModel.edges.filter(e => e.fromNodeId !== id && e.toNodeId !== id);
       this.conceptualModel.attributes = this.conceptualModel.attributes.filter(a => a.parentId !== id);
+      this.conceptualModel.hierarchies = this.conceptualModel.hierarchies.filter(h => h.id !== id);
       this.deselectAll();
     }
 
@@ -365,10 +395,75 @@
     // ─── PROPERTIES PANEL ─────────────────────────────────
     showPropsForNode(id, type) {
       this.propsPanel.classList.add('visible');
-      const node = type === 'entity'
-        ? this.conceptualModel.entities.find(e => e.id === id)
-        : this.conceptualModel.relationships.find(r => r.id === id);
+      let node;
+      if (type === 'entity') node = this.conceptualModel.entities.find(e => e.id === id);
+      else if (type === 'relationship') node = this.conceptualModel.relationships.find(r => r.id === id);
+      else if (type === 'hierarchy') node = this.conceptualModel.hierarchies.find(h => h.id === id);
+      else if (type === 'attribute') node = this.conceptualModel.attributes.find(a => a.id === id);
       if (!node) return;
+
+      if (type === 'hierarchy') {
+        this.propsTitle.textContent = 'Propriedades da Herança (ISA)';
+        const parentEnt = this.conceptualModel.entities.find(e => e.id === node.superEntityId);
+        let html = `<label>Super-Entidade: <strong>${parentEnt ? parentEnt.name : '?'}</strong></label>`;
+        html += `<label style="margin-top:8px;">Tipo de Cobertura</label>
+          <select id="hierType">
+            <option value="exclusive" ${node.type === 'exclusive' ? 'selected' : ''}>Exclusiva (Disjoint)</option>
+            <option value="overlapping" ${node.type === 'overlapping' ? 'selected' : ''}>Sobreposta (Overlapping)</option>
+          </select>`;
+        html += `<label style="margin-top:8px;">Estratégia de Mapeamento</label>
+          <select id="hierStrategy">
+            <option value="TPT" ${node.strategy === 'TPT' ? 'selected' : ''}>Tabela por Tipo (TPT)</option>
+            <option value="TPH" ${node.strategy === 'TPH' ? 'selected' : ''}>Tabela por Hierarquia (TPH)</option>
+            <option value="TPCC" ${node.strategy === 'TPCC' ? 'selected' : ''}>Tabela por Classe Concreta (TPCC)</option>
+            <option value="JSONB" ${node.strategy === 'JSONB' ? 'selected' : ''}>Híbrido Semi-Estruturado (JSONB)</option>
+          </select>`;
+        html += `<h4 style="margin-top:12px;">Sub-Entidades</h4>`;
+        for (const childId of (node.subEntityIds || [])) {
+          const childEnt = this.conceptualModel.entities.find(e => e.id === childId);
+          html += `<div class="attr-row" data-child-id="${childId}">
+            <span style="flex:1;font-size:11px;color:#e2e8f0;">${childEnt ? childEnt.name : '?'}</span>
+            <button class="small-btn btn-del hier-remove-child">×</button>
+          </div>`;
+        }
+        html += `<label style="margin-top:8px;">Adicionar Sub-Entidade</label>
+          <select id="hierAddChild">
+            <option value="">-- Selecione --</option>
+            ${this.conceptualModel.entities
+              .filter(e => e.id !== node.superEntityId && !(node.subEntityIds || []).includes(e.id))
+              .map(e => `<option value="${e.id}">${e.name}</option>`)
+              .join('')}
+          </select>`;
+        html += `<button class="small-btn btn-del" id="btnDeleteNode" style="margin-top:12px;width:100%;">Excluir Herança</button>`;
+
+        this.propsContent.innerHTML = html;
+
+        document.getElementById('hierType').addEventListener('change', (e) => {
+          this.pushSnapshot(); node.type = e.target.value; this.render();
+        });
+        document.getElementById('hierStrategy').addEventListener('change', (e) => {
+          this.pushSnapshot(); node.strategy = e.target.value; this.render();
+        });
+        document.getElementById('hierAddChild').addEventListener('change', (e) => {
+          if (!e.target.value) return;
+          this.pushSnapshot();
+          if (!node.subEntityIds) node.subEntityIds = [];
+          node.subEntityIds.push(e.target.value);
+          this.render();
+          this.showPropsForNode(id, type);
+        });
+        this.propsContent.querySelectorAll('.hier-remove-child').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const childId = e.target.closest('.attr-row').dataset.childId;
+            this.pushSnapshot();
+            node.subEntityIds = (node.subEntityIds || []).filter(c => c !== childId);
+            this.render();
+            this.showPropsForNode(id, type);
+          });
+        });
+        document.getElementById('btnDeleteNode').addEventListener('click', () => this.deleteSelectedNode());
+        return;
+      }
 
       const attrs = this.conceptualModel.attributes.filter(a => a.parentId === id);
       this.propsTitle.textContent = type === 'entity' ? 'Propriedades da Entidade' : 'Propriedades do Relacionamento';
@@ -378,6 +473,7 @@
         html += `<label>Tipo</label><select id="propType">
           <option value="strong" ${node.type === 'strong' ? 'selected' : ''}>Forte</option>
           <option value="weak" ${node.type === 'weak' ? 'selected' : ''}>Fraca</option>
+          <option value="associative" ${node.type === 'associative' ? 'selected' : ''}>Associativa</option>
         </select>`;
       }
 
@@ -393,6 +489,13 @@
       }
 
       html += `<button class="small-btn btn-add" id="btnAddAttrInline" style="width:100%;margin-top:4px;">+ Atributo</button>`;
+
+      if (type === 'relationship') {
+        html += `<button class="small-btn btn-add" id="btnTransformAssoc" style="margin-top:12px;width:100%;background:#059669;">
+          Transformar em Entidade Associativa
+        </button>`;
+      }
+
       html += `<button class="small-btn btn-del" id="btnDeleteNode" style="margin-top:12px;width:100%;">Excluir Elemento</button>`;
 
       this.propsContent.innerHTML = html;
@@ -405,6 +508,21 @@
       if (propType) propType.addEventListener('change', (e) => {
         this.pushSnapshot(); node.type = e.target.value; this.render();
       });
+
+      if (type === 'relationship') {
+        document.getElementById('btnTransformAssoc').addEventListener('click', () => {
+          this.pushSnapshot();
+          // Remove dos relacionamentos
+          this.conceptualModel.relationships = this.conceptualModel.relationships.filter(r => r.id !== id);
+          // Transforma em entidade associativa e coloca nas entidades
+          node.type = 'associative';
+          node.width = 160;
+          node.height = 100;
+          this.conceptualModel.entities.push(node);
+          this.render();
+          this.selectNode(id, 'entity');
+        });
+      }
 
       this.propsContent.querySelectorAll('.attr-name').forEach(inp => {
         inp.addEventListener('change', (e) => {
@@ -471,7 +589,8 @@
 
     findNodeById(id) {
       return this.conceptualModel.entities.find(e => e.id === id) ||
-             this.conceptualModel.relationships.find(r => r.id === id);
+             this.conceptualModel.relationships.find(r => r.id === id) ||
+             this.conceptualModel.hierarchies.find(h => h.id === id);
     }
 
     // ─── TRANSFORMATION ───────────────────────────────────
@@ -549,6 +668,10 @@
         if (!nodeData && this.conceptualModel.attributes) {
           nodeData = this.conceptualModel.attributes.find(a => a.id === nodeId);
           nodeType = 'attribute';
+        }
+        if (!nodeData && this.conceptualModel.hierarchies) {
+          nodeData = this.conceptualModel.hierarchies.find(h => h.id === nodeId);
+          nodeType = 'hierarchy';
         }
         if (!nodeData) return;
 
@@ -649,6 +772,50 @@
             line.setAttribute('y1', ent.y + 40);
           });
         }
+      }
+
+      // 3. Arestas de hierarquias (ISA)
+      const notation = this.notationSelect ? this.notationSelect.value : 'CHEN';
+      for (const hier of (this.conceptualModel.hierarchies || [])) {
+        if (hier.id !== nodeId && hier.superEntityId !== nodeId && !(hier.subEntityIds || []).includes(nodeId)) continue;
+
+        // Atualiza linha pai -> triângulo
+        const parentLine = this.edgesLayer.querySelector(`line[data-hier-parent="${hier.id}"]`);
+        if (parentLine) {
+          const parentEnt = this.conceptualModel.entities.find(e => e.id === hier.superEntityId);
+          if (parentEnt) {
+            if (notation === 'MERISE') {
+              const attrs = (this.conceptualModel.attributes || []).filter(a => a.parentId === parentEnt.id);
+              const parentH = Math.max(90, 36 + attrs.length * 18);
+              parentLine.setAttribute('x1', parentEnt.x + 90);
+              parentLine.setAttribute('y1', parentEnt.y + parentH);
+            } else {
+              parentLine.setAttribute('x1', parentEnt.x + 80);
+              parentLine.setAttribute('y1', parentEnt.y + 80);
+            }
+            parentLine.setAttribute('x2', hier.x + 40);
+            parentLine.setAttribute('y2', hier.y);
+          }
+        }
+
+        // Atualiza linhas triângulo -> filhos
+        const childLines = this.edgesLayer.querySelectorAll(`line[data-hier-child="${hier.id}"]`);
+        childLines.forEach(line => {
+          const childId = line.getAttribute('data-child-id');
+          const childEnt = this.conceptualModel.entities.find(e => e.id === childId);
+          if (childEnt) {
+            const idx = hier.subEntityIds.indexOf(childId);
+            const spacing = 80 / (hier.subEntityIds.length + 1);
+            line.setAttribute('x1', hier.x + spacing * (idx + 1));
+            line.setAttribute('y1', hier.y + 50);
+            if (notation === 'MERISE') {
+              line.setAttribute('x2', childEnt.x + 90);
+            } else {
+              line.setAttribute('x2', childEnt.x + 80);
+            }
+            line.setAttribute('y2', childEnt.y);
+          }
+        });
       }
     }
 

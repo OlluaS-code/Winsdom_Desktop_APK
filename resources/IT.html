@@ -84,6 +84,7 @@
     .shape-weak { border-color: #f59e0b; background: rgba(245,158,11,0.15); border-radius: 3px; border-style: dashed; }
     .shape-rel { border-color: #34d399; background: rgba(16,185,129,0.15); border-radius: 3px; transform: rotate(45deg); }
     .shape-attr { border-color: #fbbf24; background: rgba(251,191,36,0.15); border-radius: 50%; }
+    .shape-isa { border-color: #a78bfa; background: rgba(167,139,250,0.15); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
 
     /* SVG Nodes */
     .interactive-node { cursor: move; }
@@ -227,6 +228,10 @@
       <button id="btnAddEdge" class="tool-item" style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 4px;">
         <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2"><line x1="2" y1="12" x2="12" y2="2"/></svg>
         Conectar (Aresta)
+      </button>
+      <button id="btnAddHierarchy" class="tool-item" style="border-top: 1px solid #334155; padding-top: 12px; margin-top: 4px;">
+        <svg width="14" height="14" fill="none" stroke="#a78bfa" stroke-width="2"><polygon points="7,1 13,13 1,13"/></svg>
+        Herança (ISA)
       </button>
     </aside>
 

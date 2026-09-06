@@ -49,9 +49,9 @@ class RelationalMappingEngine {
     return flattened;
   }
 
-  // PASSO 1: Entidades Regulares (Fortes)
+  // PASSO 1: Entidades Regulares (Fortes) e Associativas
   step1_mapStrongEntities() {
-    const strongEntities = this.conceptual.entities.filter(e => e.type === 'strong');
+    const strongEntities = this.conceptual.entities.filter(e => e.type === 'strong' || e.type === 'associative');
 
     for (const entity of strongEntities) {
       const tableId = this.generateUUID();

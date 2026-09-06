@@ -41,12 +41,21 @@ class MultiNotationProjector {
       rect.setAttribute('height', '80');
       rect.setAttribute('rx', '4');
       rect.setAttribute('fill', '#1e293b');
-      rect.setAttribute('stroke', ent.type === 'weak' ? '#f59e0b' : '#6366f1');
+      rect.setAttribute('stroke', ent.type === 'weak' ? '#f59e0b' : (ent.type === 'associative' ? '#059669' : '#6366f1'));
       rect.setAttribute('stroke-width', ent.type === 'weak' ? '4' : '2');
       if (ent.type === 'weak') rect.setAttribute('stroke-dasharray', '6,3');
+      g.appendChild(rect);
+
+      if (ent.type === 'associative') {
+        const poly = document.createElementNS(this.ns, 'polygon');
+        poly.setAttribute('points', '80,5 155,40 80,75 5,40');
+        poly.setAttribute('fill', '#0f172a');
+        poly.setAttribute('stroke', '#059669');
+        poly.setAttribute('stroke-width', '1.5');
+        g.appendChild(poly);
+      }
 
       const text = this.createText(80, 45, ent.name, '#f8fafc', '13px', '600');
-      g.appendChild(rect);
       g.appendChild(text);
       
       const attrs = attributes.filter(a => a.parentId === ent.id);
@@ -133,6 +142,46 @@ class MultiNotationProjector {
           this.edgesLayer.appendChild(gEdge);
         }
     }
+
+    // Renderiza Hierarquias (Triângulo ISA)
+    const hierarchies = model.hierarchies || [];
+    for (const hier of hierarchies) {
+      const g = this.createGroup(hier.x, hier.y, hier.id);
+      const poly = document.createElementNS(this.ns, 'polygon');
+      poly.setAttribute('points', '40,0 80,50 0,50');
+      poly.setAttribute('fill', '#0f172a');
+      poly.setAttribute('stroke', '#a78bfa');
+      poly.setAttribute('stroke-width', '2');
+      g.appendChild(poly);
+
+      const text = this.createText(40, 35, hier.type === 'exclusive' ? 'd' : 'o', '#a78bfa', '14px', '700');
+      g.appendChild(text);
+
+      const isaLabel = this.createText(40, 65, 'ISA', '#a78bfa', '10px', '600');
+      g.appendChild(isaLabel);
+      this.nodesLayer.appendChild(g);
+
+      // Linha da super-entidade para o topo do triângulo
+      const parentEnt = entities.find(e => e.id === hier.superEntityId);
+      if (parentEnt) {
+        const line = this.renderLine(parentEnt.x + 80, parentEnt.y + 80, hier.x + 40, hier.y, '#a78bfa', '2');
+        line.setAttribute('data-hier-parent', hier.id);
+      }
+
+      // Linhas do fundo do triângulo para cada sub-entidade
+      for (let i = 0; i < (hier.subEntityIds || []).length; i++) {
+        const childId = hier.subEntityIds[i];
+        const childEnt = entities.find(e => e.id === childId);
+        if (childEnt) {
+          const spacing = 80 / (hier.subEntityIds.length + 1);
+          const fromX = hier.x + spacing * (i + 1);
+          const fromY = hier.y + 50;
+          const line = this.renderLine(fromX, fromY, childEnt.x + 80, childEnt.y, '#a78bfa', '1.5');
+          line.setAttribute('data-hier-child', hier.id);
+          line.setAttribute('data-child-id', childId);
+        }
+      }
+    }
   }
 
   // 2. Notação Francesa Merise (MCD): Retângulos com Atributos e (min, max)
@@ -152,7 +201,7 @@ class MultiNotationProjector {
       rect.setAttribute('height', h);
       rect.setAttribute('rx', '6');
       rect.setAttribute('fill', '#1e293b');
-      rect.setAttribute('stroke', '#38bdf8');
+      rect.setAttribute('stroke', ent.type === 'associative' ? '#10b981' : '#38bdf8');
       rect.setAttribute('stroke-width', '2');
       g.appendChild(rect);
 
@@ -223,6 +272,46 @@ class MultiNotationProjector {
           
           this.edgesLayer.appendChild(gEdge);
         }
+    }
+
+    // Renderiza Hierarquias (Triângulo ISA) - Merise
+    const hierarchies = model.hierarchies || [];
+    for (const hier of hierarchies) {
+      const g = this.createGroup(hier.x, hier.y, hier.id);
+      const poly = document.createElementNS(this.ns, 'polygon');
+      poly.setAttribute('points', '40,0 80,50 0,50');
+      poly.setAttribute('fill', '#0f172a');
+      poly.setAttribute('stroke', '#a78bfa');
+      poly.setAttribute('stroke-width', '2');
+      g.appendChild(poly);
+
+      const text = this.createText(40, 35, hier.type === 'exclusive' ? 'd' : 'o', '#a78bfa', '14px', '700');
+      g.appendChild(text);
+
+      const isaLabel = this.createText(40, 65, 'ISA', '#a78bfa', '10px', '600');
+      g.appendChild(isaLabel);
+      this.nodesLayer.appendChild(g);
+
+      const parentEnt = entities.find(e => e.id === hier.superEntityId);
+      if (parentEnt) {
+        const attrs = (model.attributes || []).filter(a => a.parentId === parentEnt.id);
+        const parentH = Math.max(90, 36 + attrs.length * 18);
+        const line = this.renderLine(parentEnt.x + 90, parentEnt.y + parentH, hier.x + 40, hier.y, '#a78bfa', '2');
+        line.setAttribute('data-hier-parent', hier.id);
+      }
+
+      for (let i = 0; i < (hier.subEntityIds || []).length; i++) {
+        const childId = hier.subEntityIds[i];
+        const childEnt = entities.find(e => e.id === childId);
+        if (childEnt) {
+          const spacing = 80 / (hier.subEntityIds.length + 1);
+          const fromX = hier.x + spacing * (i + 1);
+          const fromY = hier.y + 50;
+          const line = this.renderLine(fromX, fromY, childEnt.x + 90, childEnt.y, '#a78bfa', '1.5');
+          line.setAttribute('data-hier-child', hier.id);
+          line.setAttribute('data-child-id', childId);
+        }
+      }
     }
   }
 
