@@ -114,11 +114,17 @@ class MultiNotationProjector {
     
     // Conexões e Rótulos de Mapeamento Funcional
     for (const edge of edges) {
-        const ent = entities.find(e => e.id === edge.fromNodeId || e.id === edge.toNodeId);
-        const rel = relationships.find(r => r.id === edge.fromNodeId || r.id === edge.toNodeId);
-        if (ent && rel) {
-          const x1 = ent.x + 80, y1 = ent.y + 40;
-          const x2 = rel.x + 50, y2 = rel.y + 35;
+        const fromNode = entities.find(e => e.id === edge.fromNodeId) || relationships.find(r => r.id === edge.fromNodeId);
+        const toNode = entities.find(e => e.id === edge.toNodeId) || relationships.find(r => r.id === edge.toNodeId);
+        
+        if (fromNode && toNode) {
+          const fromIsRel = !entities.find(e => e.id === fromNode.id);
+          const toIsRel = !entities.find(e => e.id === toNode.id);
+          
+          const x1 = fromNode.x + (fromIsRel ? 50 : 80);
+          const y1 = fromNode.y + (fromIsRel ? 35 : 40);
+          const x2 = toNode.x + (toIsRel ? 50 : 80);
+          const y2 = toNode.y + (toIsRel ? 35 : 40);
           
           const gEdge = document.createElementNS(this.ns, 'g');
           gEdge.setAttribute('data-edge-id', edge.id);
@@ -243,11 +249,17 @@ class MultiNotationProjector {
     }
     
     for (const edge of edges) {
-        const ent = entities.find(e => e.id === edge.fromNodeId || e.id === edge.toNodeId);
-        const rel = relationships.find(r => r.id === edge.fromNodeId || r.id === edge.toNodeId);
-        if (ent && rel) {
-          const x1 = ent.x + 90, y1 = ent.y + 45;
-          const x2 = rel.x + 55, y2 = rel.y + 28;
+        const fromNode = entities.find(e => e.id === edge.fromNodeId) || relationships.find(r => r.id === edge.fromNodeId);
+        const toNode = entities.find(e => e.id === edge.toNodeId) || relationships.find(r => r.id === edge.toNodeId);
+        
+        if (fromNode && toNode) {
+          const fromIsRel = !entities.find(e => e.id === fromNode.id);
+          const toIsRel = !entities.find(e => e.id === toNode.id);
+          
+          const x1 = fromNode.x + (fromIsRel ? 55 : 90);
+          const y1 = fromNode.y + (fromIsRel ? 28 : 45);
+          const x2 = toNode.x + (toIsRel ? 55 : 90);
+          const y2 = toNode.y + (toIsRel ? 28 : 45);
           
           const gEdge = document.createElementNS(this.ns, 'g');
           gEdge.setAttribute('data-edge-id', edge.id);
