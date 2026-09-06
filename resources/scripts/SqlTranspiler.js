@@ -178,9 +178,26 @@ class SqlTranspiler {
         if (!col.isNullable) colStr += ' NOT NULL';
         if (col.isUnique && !col.isPrimaryKey) colStr += ' UNIQUE';
 
+        if (col.defaultValue) {
+          const defVal = dialect === 'sqlite' && col.defaultValue.value === 'CURRENT_TIMESTAMP' ? '(datetime(\'now\'))' : col.defaultValue.value;
+          colStr += ` DEFAULT ${defVal}`;
+        }
+
         if (col.isForeignKey && !col.isDeferredFK && col.references) {
           const refTable = dialect === 'mysql' ? '`' + col.references.tableName + '`' : col.references.tableName;
-          colStr += ` REFERENCES ${refTable}(${col.references.columnName}) ON DELETE ${referentialActions.onDelete} ON UPDATE ${referentialActions.onUpdate}`;
+          
+          let onDelete = referentialActions.onDelete;
+          let onUpdate = referentialActions.onUpdate;
+          
+          const rel = this.logicalModel.relationships.find(
+            r => r.sourceTableId === col.references.tableId && 
+                 r.targetTableId === table.id && 
+                 r.targetColumnId === col.id
+          );
+          if (rel && rel.onDelete) onDelete = rel.onDelete;
+          if (rel && rel.onUpdate) onUpdate = rel.onUpdate;
+
+          colStr += ` REFERENCES ${refTable}(${col.references.columnName}) ON DELETE ${onDelete} ON UPDATE ${onUpdate}`;
         }
 
         if (col.isPrimaryKey) {
@@ -201,10 +218,26 @@ class SqlTranspiler {
     if (circularFKs.length > 0 && dialect !== 'sqlite') {
       ddl += `-- Resolucao de Integridade Referencial para Dependencias Circulares\n`;
       for (const fk of circularFKs) {
+        let onDelete = referentialActions.onDelete;
+        let onUpdate = referentialActions.onUpdate;
+        
+        // table id e col id nao tao mapeados no fk, fk tem os nomes
+        // busca no logical model relationships
+        const rel = this.logicalModel.relationships.find(
+          r => {
+             const t = this.logicalModel.tables.find(tbl => tbl.id === r.targetTableId);
+             const s = this.logicalModel.tables.find(tbl => tbl.id === r.sourceTableId);
+             if(!t || !s) return false;
+             return t.name === fk.sourceTable && s.name === fk.targetTable;
+          }
+        );
+        if (rel && rel.onDelete) onDelete = rel.onDelete;
+        if (rel && rel.onUpdate) onUpdate = rel.onUpdate;
+
         const constraintName = `fk_${fk.sourceTable}_${fk.columnName}`;
         ddl += `ALTER TABLE ${fk.sourceTable} ADD CONSTRAINT ${constraintName} `;
         ddl += `FOREIGN KEY (${fk.columnName}) REFERENCES ${fk.targetTable}(${fk.targetColumn}) `;
-        ddl += `ON DELETE ${referentialActions.onDelete} ON UPDATE ${referentialActions.onUpdate};\n`;
+        ddl += `ON DELETE ${onDelete} ON UPDATE ${onUpdate};\n`;
       }
       ddl += '\n';
     }

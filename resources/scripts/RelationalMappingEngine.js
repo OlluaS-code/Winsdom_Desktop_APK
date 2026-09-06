@@ -3,8 +3,9 @@
  * formal de Peter Chen, Carlos Alberto Heuser e Elmasri & Navathe.
  */
 class RelationalMappingEngine {
-  constructor(conceptualModel) {
+  constructor(conceptualModel, existingLogicalModel = null) {
     this.conceptual = JSON.parse(JSON.stringify(conceptualModel));
+    this.existingLogical = existingLogicalModel ? JSON.parse(JSON.stringify(existingLogicalModel)) : null;
     this.logicalTables = new Map();
     this.logicalRelationships = [];
     this.entityToTableMap = new Map();
@@ -19,10 +20,41 @@ class RelationalMappingEngine {
     this.step6_mapMultivaluedAttributes();
     this.step7_mapSpecializations();
 
-    return {
+    const result = {
       tables: Array.from(this.logicalTables.values()),
       relationships: this.logicalRelationships
     };
+
+    if (this.existingLogical) {
+      this.mergeOverrides(result);
+    }
+    return result;
+  }
+
+  mergeOverrides(result) {
+    for (const table of result.tables) {
+      const oldTable = this.existingLogical.tables.find(t => t.id === table.id);
+      if (oldTable) {
+        table.indexes = oldTable.indexes || [];
+        for (const col of table.columns) {
+          const oldCol = oldTable.columns.find(c => c.id === col.id);
+          if (oldCol) {
+            col.dataType = oldCol.dataType;
+            col.defaultValue = oldCol.defaultValue;
+          }
+        }
+      }
+    }
+    for (const rel of result.relationships) {
+      const oldRel = this.existingLogical.relationships.find(r => r.id === rel.id);
+      if (oldRel) {
+        rel.onDelete = oldRel.onDelete || 'CASCADE';
+        rel.onUpdate = oldRel.onUpdate || 'CASCADE';
+      } else {
+        rel.onDelete = 'CASCADE';
+        rel.onUpdate = 'CASCADE';
+      }
+    }
   }
 
   generateUUID() {
@@ -54,11 +86,11 @@ class RelationalMappingEngine {
     const strongEntities = this.conceptual.entities.filter(e => e.type === 'strong' || e.type === 'associative');
 
     for (const entity of strongEntities) {
-      const tableId = this.generateUUID();
+      const tableId = entity.id; // Deterministic ID
       const flatAttrs = this.flattenAttributes(entity.id);
 
       const columns = flatAttrs.map(attr => ({
-        id: this.generateUUID(),
+        id: attr.id, // Deterministic ID
         name: attr.name.toLowerCase(),
         dataType: attr.dataType || 'VARCHAR(255)',
         isPrimaryKey: Boolean(attr.isKey),
@@ -88,7 +120,7 @@ class RelationalMappingEngine {
     const weakEntities = this.conceptual.entities.filter(e => e.type === 'weak');
 
     for (const weak of weakEntities) {
-      const tableId = this.generateUUID();
+      const tableId = weak.id; // Deterministic
       const flatAttrs = this.flattenAttributes(weak.id);
 
       const incidentEdges = this.conceptual.edges.filter(
@@ -115,7 +147,7 @@ class RelationalMappingEngine {
       }
 
       const columns = flatAttrs.map(attr => ({
-        id: this.generateUUID(),
+        id: attr.id, // Deterministic
         name: attr.name.toLowerCase(),
         dataType: attr.dataType || 'VARCHAR(255)',
         isPrimaryKey: Boolean(attr.isPartialKey || attr.isKey),
@@ -129,7 +161,7 @@ class RelationalMappingEngine {
         const ownerPKs = ownerTable.columns.filter(c => c.isPrimaryKey);
 
         for (const pk of ownerPKs) {
-          const fkColumnId = this.generateUUID();
+          const fkColumnId = `fk_${pk.id}_${weak.id}`;
           const fkColName = `${ownerTable.name}_${pk.name}`;
           columns.unshift({
             id: fkColumnId,
@@ -147,7 +179,7 @@ class RelationalMappingEngine {
           });
 
           this.logicalRelationships.push({
-            id: this.generateUUID(),
+            id: `rel_${relId}_${pk.id}`,
             sourceTableId: ownerTable.id,
             targetTableId: tableId,
             sourceColumnId: pk.id,
@@ -205,7 +237,7 @@ class RelationalMappingEngine {
 
         const sourcePKs = sourceTable.columns.filter(c => c.isPrimaryKey);
         for (const pk of sourcePKs) {
-          const fkColId = this.generateUUID();
+          const fkColId = `fk_${pk.id}_${targetTable.id}`;
           targetTable.columns.push({
             id: fkColId,
             name: `${sourceTable.name}_${pk.name}`,
@@ -222,7 +254,7 @@ class RelationalMappingEngine {
           });
 
           this.logicalRelationships.push({
-            id: this.generateUUID(),
+            id: `rel_11_${rel.id}_${pk.id}`,
             sourceTableId: sourceTable.id,
             targetTableId: targetTable.id,
             sourceColumnId: pk.id,
@@ -235,7 +267,7 @@ class RelationalMappingEngine {
         const relAttrs = this.conceptual.attributes.filter(a => a.parentId === rel.id);
         for (const attr of relAttrs) {
           targetTable.columns.push({
-            id: this.generateUUID(),
+            id: attr.id,
             name: attr.name.toLowerCase(),
             dataType: attr.dataType || 'VARCHAR(255)',
             isPrimaryKey: false,
@@ -273,7 +305,7 @@ class RelationalMappingEngine {
           const pkColumns = tableOne.columns.filter(c => c.isPrimaryKey);
 
           for (const pk of pkColumns) {
-            const fkColId = this.generateUUID();
+            const fkColId = `fk_${pk.id}_${tableMany.id}_${rel.id}`;
             tableMany.columns.push({
               id: fkColId,
               name: `${tableOne.name}_${pk.name}`,
@@ -290,7 +322,7 @@ class RelationalMappingEngine {
             });
 
             this.logicalRelationships.push({
-              id: this.generateUUID(),
+              id: `rel_1n_${rel.id}_${pk.id}`,
               sourceTableId: tableOne.id,
               targetTableId: tableMany.id,
               sourceColumnId: pk.id,
@@ -303,7 +335,7 @@ class RelationalMappingEngine {
           const relAttrs = this.conceptual.attributes.filter(a => a.parentId === rel.id);
           for (const attr of relAttrs) {
             tableMany.columns.push({
-              id: this.generateUUID(),
+              id: attr.id,
               name: attr.name.toLowerCase(),
               dataType: attr.dataType || 'VARCHAR(255)',
               isPrimaryKey: false,
@@ -328,7 +360,7 @@ class RelationalMappingEngine {
       const isNary = edges.length > 2;
 
       if (isBinaryMN || isNary) {
-        const assocTableId = this.generateUUID();
+        const assocTableId = rel.id; // Deterministic
         const assocColumns = [];
 
         for (const edge of edges) {
@@ -339,7 +371,7 @@ class RelationalMappingEngine {
 
           const pks = participantTable.columns.filter(c => c.isPrimaryKey);
           for (const pk of pks) {
-            const fkColId = this.generateUUID();
+            const fkColId = `fk_${pk.id}_${assocTableId}`;
             assocColumns.push({
               id: fkColId,
               name: `${participantTable.name}_${pk.name}`,
@@ -356,7 +388,7 @@ class RelationalMappingEngine {
             });
 
             this.logicalRelationships.push({
-              id: this.generateUUID(),
+              id: `rel_mn_${rel.id}_${participantTable.id}_${pk.id}`,
               sourceTableId: participantTable.id,
               targetTableId: assocTableId,
               sourceColumnId: pk.id,
@@ -370,7 +402,7 @@ class RelationalMappingEngine {
         const relAttrs = this.conceptual.attributes.filter(a => a.parentId === rel.id);
         for (const attr of relAttrs) {
           assocColumns.push({
-            id: this.generateUUID(),
+            id: attr.id,
             name: attr.name.toLowerCase(),
             dataType: attr.dataType || 'VARCHAR(255)',
             isPrimaryKey: false,
@@ -407,11 +439,11 @@ class RelationalMappingEngine {
       const parentTable = this.logicalTables.get(parentTableId);
       const parentPKs = parentTable.columns.filter(c => c.isPrimaryKey);
 
-      const tableId = this.generateUUID();
+      const tableId = attr.id;
       const columns = [];
 
       for (const pk of parentPKs) {
-        const fkColId = this.generateUUID();
+        const fkColId = `fk_${pk.id}_${attr.id}`;
         columns.push({
           id: fkColId,
           name: `${parentTable.name}_${pk.name}`,
@@ -428,7 +460,7 @@ class RelationalMappingEngine {
         });
 
         this.logicalRelationships.push({
-          id: this.generateUUID(),
+          id: `rel_mv_${attr.id}_${pk.id}`,
           sourceTableId: parentTable.id,
           targetTableId: tableId,
           sourceColumnId: pk.id,
@@ -439,7 +471,7 @@ class RelationalMappingEngine {
       }
 
       columns.push({
-        id: this.generateUUID(),
+        id: `val_${attr.id}`,
         name: attr.name.toLowerCase(),
         dataType: attr.dataType || 'VARCHAR(255)',
         isPrimaryKey: true,
