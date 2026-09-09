@@ -110,6 +110,31 @@
       border: none; background: #6366f1; color: #fff; cursor: pointer; transition: all 0.15s;
     }
     .copy-btn:hover { background: #4f46e5; }
+    /* Media Print para Exportação PDF */
+    @media print {
+      .app-header, .toolbox, .sql-panel, .property-panel, .tab-bar, .context-menu {
+        display: none !important;
+      }
+      body, .canvas-viewport {
+        background: #ffffff !important; /* Fundo branco no PDF */
+        overflow: visible !important;
+      }
+      .canvas-viewport {
+        background-image: none !important; /* Remove grid */
+      }
+      svg {
+        /* Garante que os SVGs fiquem com cores boas e quebrem corretamente */
+        color-adjust: exact !important;
+        -webkit-print-color-adjust: exact !important;
+      }
+      text {
+        fill: #000 !important; /* Texto escuro no PDF */
+      }
+      /* Ajuste dos retângulos para terem borda preta em vez de cores de tema escuro */
+      rect, polygon {
+        stroke: #000 !important;
+      }
+    }
     #sqlCodeOutput {
       flex: 1; margin-top: 16px; background: #1e293b; border: 1px solid #334155;
       border-radius: 12px; padding: 16px; font-family: 'Fira Code', 'Cascadia Code', monospace;

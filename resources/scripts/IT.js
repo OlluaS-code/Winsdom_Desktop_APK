@@ -1126,5 +1126,16 @@
     }
   }
 
-  window.addEventListener('DOMContentLoaded', () => { new WinsdomDataModelerApp(); });
+  window.addEventListener('DOMContentLoaded', () => {
+    new WinsdomDataModelerApp();
+    
+    // Listener para o menu nativo do Electron (Exportar para PDF)
+    if (window.winsdom && window.winsdom.onExportPDF) {
+      window.winsdom.onExportPDF(() => {
+        // Usa a API nativa de print (que o usuário pode salvar como PDF),
+        // aproveitando o CSS @media print injetado no IT.html
+        window.print();
+      });
+    }
+  });
 })();
