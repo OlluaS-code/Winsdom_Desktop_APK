@@ -81,14 +81,15 @@ class MultiNotationProjector {
         line.setAttribute('data-parent-id', ent.id);
 
         const ag = this.createGroup(attr.x, attr.y, attr.id);
+        const isSelectedAttr = this.selectedGroup && this.selectedGroup.has(attr.id);
         const ellipse = document.createElementNS(this.ns, 'ellipse');
         ellipse.setAttribute('cx', '45');
         ellipse.setAttribute('cy', '20');
         ellipse.setAttribute('rx', '45');
         ellipse.setAttribute('ry', '20');
         ellipse.setAttribute('fill', '#0f172a');
-        ellipse.setAttribute('stroke', attr.isKey ? '#fde047' : '#94a3b8');
-        ellipse.setAttribute('stroke-width', '1.5');
+        ellipse.setAttribute('stroke', isSelectedAttr ? '#f8fafc' : (attr.isKey ? '#fde047' : '#94a3b8'));
+        ellipse.setAttribute('stroke-width', isSelectedAttr ? '3' : '1.5');
         ag.appendChild(ellipse);
 
         const aText = this.createText(45, 24, attr.name, attr.isKey ? '#fde047' : '#e2e8f0', '10px');

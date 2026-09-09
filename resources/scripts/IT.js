@@ -152,13 +152,19 @@
           if (w > 5 || h > 5) {
              const allItems = [...this.conceptualModel.entities, ...this.conceptualModel.relationships, ...this.conceptualModel.attributes, ...this.conceptualModel.hierarchies];
              for (const item of allItems) {
-               // Uma verificação AABB (Bounding Box) simples
                const ix = item.x || 0;
                const iy = item.y || 0;
-               // Verifica se o ponto (ou uma caixa aproximada do nó) cai dentro da seleção
-               // Utilizando o centro do nó para facilitar
-               const cx = ix + (item.width || 100)/2;
-               const cy = iy + (item.height || 70)/2;
+               
+               let cx, cy;
+               if (this.conceptualModel.attributes && this.conceptualModel.attributes.find(a => a.id === item.id)) {
+                  cx = ix + 45; cy = iy + 20;
+               } else if (this.conceptualModel.relationships && this.conceptualModel.relationships.find(r => r.id === item.id)) {
+                  cx = ix + 50; cy = iy + 35;
+               } else if (this.conceptualModel.hierarchies && this.conceptualModel.hierarchies.find(h => h.id === item.id)) {
+                  cx = ix + 40; cy = iy + 40;
+               } else {
+                  cx = ix + 80; cy = iy + 40;
+               }
                
                if (cx >= x && cx <= x + w && cy >= y && cy <= y + h) {
                   this.selectedGroup.add(item.id);
