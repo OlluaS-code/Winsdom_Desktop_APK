@@ -552,7 +552,9 @@ class RelationalMappingEngine {
           sourceColumnId: pk.id,
           targetColumnId: fkColId,
           cardinalitySource: '1..1',
-          cardinalityTarget: '0..N'
+          cardinalityTarget: '0..N',
+          onDelete: 'CASCADE', // Tabela multivalorada é fraca
+          onUpdate: 'CASCADE'
         });
       }
 
@@ -598,32 +600,35 @@ class RelationalMappingEngine {
         // Adiciona a PK da superclasse como PK/FK na subclasse (estratégia TPT)
         for (const pk of superPKs) {
           const fkColId = `fk_hier_${pk.id}_${subTable.id}`;
-          subTable.columns.unshift({
-            id: fkColId,
-            name: `${superTable.name}_${pk.name}`,
-            dataType: pk.dataType,
-            isPrimaryKey: true,
-            isForeignKey: true,
-            isNullable: false,
-            isUnique: false,
-            references: {
-              tableId: superTable.id,
-              tableName: superTable.name,
-              columnName: pk.name
-            }
-          });
+          
+          if (!subTable.columns.find(c => c.id === fkColId)) {
+            subTable.columns.unshift({
+              id: fkColId,
+              name: pk.name, // Mesma nomenclatura por convenção de herança
+              dataType: pk.dataType,
+              isPrimaryKey: true,
+              isForeignKey: true,
+              isNullable: false,
+              isUnique: false,
+              references: {
+                tableId: superTable.id,
+                tableName: superTable.name,
+                columnName: pk.name
+              }
+            });
 
-          this.logicalRelationships.push({
-            id: `rel_hier_${hier.id}_${subTable.id}_${pk.id}`,
-            sourceTableId: superTable.id,
-            targetTableId: subTable.id,
-            sourceColumnId: pk.id,
-            targetColumnId: fkColId,
-            cardinalitySource: '1..1',
-            cardinalityTarget: '0..1',
-            onDelete: 'CASCADE',
-            onUpdate: 'CASCADE'
-          });
+            this.logicalRelationships.push({
+              id: `rel_hier_${hier.id}_${subTable.id}_${pk.id}`,
+              sourceTableId: superTable.id,
+              targetTableId: subTable.id,
+              sourceColumnId: pk.id,
+              targetColumnId: fkColId,
+              cardinalitySource: '1..1',
+              cardinalityTarget: '0..1',
+              onDelete: 'CASCADE', // TPT exige cascata estrutural
+              onUpdate: 'CASCADE'
+            });
+          }
         }
       }
     }
