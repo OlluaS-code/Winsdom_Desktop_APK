@@ -112,7 +112,7 @@
     .copy-btn:hover { background: #4f46e5; }
     /* Media Print para Exportação PDF */
     @media print {
-      .app-header, .toolbox, .sql-panel, .property-panel, .tab-bar, .context-menu {
+      .app-header, .toolbox, .sql-panel, .property-panel, .tab-bar, .context-menu, .linter-panel {
         display: none !important;
       }
       body, .canvas-viewport {
@@ -128,11 +128,16 @@
         -webkit-print-color-adjust: exact !important;
       }
       text {
-        fill: #000 !important; /* Texto escuro no PDF */
+        fill: #000000 !important; /* Texto escuro no PDF */
       }
-      /* Ajuste dos retângulos para terem borda preta em vez de cores de tema escuro */
-      rect, polygon {
-        stroke: #000 !important;
+      /* Ajuste dos elementos SVG para branco/preto */
+      rect, polygon, ellipse, path {
+        stroke: #000000 !important;
+        fill: #ffffff !important;
+      }
+      /* Linhas de relacionamento */
+      line {
+        stroke: #000000 !important;
       }
     }
     #sqlCodeOutput {

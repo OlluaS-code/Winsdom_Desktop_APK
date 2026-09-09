@@ -1132,9 +1132,45 @@
     // Listener para o menu nativo do Electron (Exportar para PDF)
     if (window.winsdom && window.winsdom.onExportPDF) {
       window.winsdom.onExportPDF(() => {
-        // Usa a API nativa de print (que o usuário pode salvar como PDF),
-        // aproveitando o CSS @media print injetado no IT.html
+        const svg = document.getElementById('svgRoot');
+        const viewport = document.getElementById('viewportGroup');
+        
+        if (!svg || !viewport) {
+          window.print();
+          return;
+        }
+
+        // 1. Backup do estado original de pan/zoom
+        const originalTransform = viewport.getAttribute('transform');
+        const originalViewBox = svg.getAttribute('viewBox');
+        
+        // 2. Calcular Bounding Box para centralizar o diagrama inteiro
+        try {
+          const bbox = viewport.getBBox();
+          const padding = 40;
+          
+          // Ajusta a "lente" do SVG para exatamente a área do diagrama
+          svg.setAttribute('viewBox', `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`);
+          
+          // Reseta a translação para não deslocar o conteúdo dentro da nova lente
+          viewport.setAttribute('transform', 'translate(0,0) scale(1)');
+        } catch (e) {
+          console.warn("Erro ao calcular BBox", e);
+        }
+
+        // 3. Imprime
         window.print();
+
+        // 4. Restaura estado original para a tela voltar ao normal
+        if (originalViewBox) {
+          svg.setAttribute('viewBox', originalViewBox);
+        } else {
+          svg.removeAttribute('viewBox');
+        }
+        
+        if (originalTransform) {
+          viewport.setAttribute('transform', originalTransform);
+        }
       });
     }
   });
