@@ -29,7 +29,12 @@ class SemanticLinter {
     for (const entity of this.model.entities) {
       if (entity.type !== 'weak') {
         const hasKey = attributes.some(a => a.parentId === entity.id && a.isKey);
-        if (!hasKey) {
+        let isSubClass = false;
+        if (this.model.hierarchies) {
+           isSubClass = this.model.hierarchies.some(h => h.subEntityIds.includes(entity.id));
+        }
+        
+        if (!hasKey && !isSubClass) {
           this.addDiagnostic(
             'LINT_E001', 'WARNING',
             `Entidade forte '${entity.name}' não possui atributo identificador primário.`,

@@ -494,35 +494,51 @@ class RelationalMappingEngine {
     }
   }
 
-  // PASSO 7: Especialização e Generalização (4 Estratégias)
   step7_mapSpecializations() {
-    if (!this.conceptual.hierarchies || !window.InheritanceMappingEngine) return;
+    if (!this.conceptual.hierarchies) return;
 
     for (const hier of this.conceptual.hierarchies) {
-      const superEntity = this.conceptual.entities.find(e => e.id === hier.superEntityId);
-      const subEntities = hier.subEntityIds.map(id => this.conceptual.entities.find(e => e.id === id)).filter(Boolean);
+      const superTableId = this.entityToTableMap.get(hier.superEntityId);
+      if (!superTableId) continue;
       
-      if (!superEntity || subEntities.length === 0) continue;
+      const superTable = this.logicalTables.get(superTableId);
+      const superPKs = superTable.columns.filter(c => c.isPrimaryKey);
 
-      // Passa a estratégia escolhida ou o padrão TPT
-      const strategy = hier.strategy || 'TPT';
-      const inheritanceEngine = new window.InheritanceMappingEngine(hier, superEntity, subEntities, strategy);
-      const { tables, relationships } = inheritanceEngine.synthesize();
+      for (const subId of hier.subEntityIds) {
+        const subTableId = this.entityToTableMap.get(subId);
+        if (!subTableId) continue;
+        const subTable = this.logicalTables.get(subTableId);
 
-      // O engine vai gerar novas tabelas que substituem ou complementam as antigas.
-      // Neste modelo simplificado, vamos apenas mesclá-las no modelo lógico geral.
-      // (Em uma implementação completa de TPH/TPCC a gente removeria as tabelas antigas daqui)
-      for (const t of tables) {
-        // Posicionamento simples
-        t.x = superEntity.x;
-        t.y = superEntity.y + 150;
-        t.width = 220;
-        t.height = Math.max(120, 45 + t.columns.length * 28);
-        this.logicalTables.set(t.id, t);
-      }
+        // Adiciona a PK da superclasse como PK/FK na subclasse (estratégia TPT)
+        for (const pk of superPKs) {
+          const fkColId = `fk_hier_${pk.id}_${subTable.id}`;
+          subTable.columns.unshift({
+            id: fkColId,
+            name: `${superTable.name}_${pk.name}`,
+            dataType: pk.dataType,
+            isPrimaryKey: true,
+            isForeignKey: true,
+            isNullable: false,
+            isUnique: false,
+            references: {
+              tableId: superTable.id,
+              tableName: superTable.name,
+              columnName: pk.name
+            }
+          });
 
-      for (const r of relationships) {
-        this.logicalRelationships.push(r);
+          this.logicalRelationships.push({
+            id: `rel_hier_${hier.id}_${subTable.id}_${pk.id}`,
+            sourceTableId: superTable.id,
+            targetTableId: subTable.id,
+            sourceColumnId: pk.id,
+            targetColumnId: fkColId,
+            cardinalitySource: '1..1',
+            cardinalityTarget: '0..1',
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE'
+          });
+        }
       }
     }
   }
