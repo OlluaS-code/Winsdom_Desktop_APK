@@ -20,6 +20,11 @@ class RelationalMappingEngine {
     this.step6_mapMultivaluedAttributes();
     this.step7_mapSpecializations();
 
+    for (const table of this.logicalTables.values()) {
+      table.width = this.calculateTableWidth(table.name, table.columns);
+      table.height = Math.max(120, 45 + table.columns.length * 28);
+    }
+
     const result = {
       tables: Array.from(this.logicalTables.values()),
       relationships: this.logicalRelationships
@@ -81,9 +86,28 @@ class RelationalMappingEngine {
     return flattened;
   }
 
+  calculateTableWidth(name, columns) {
+    let maxLen = name.length;
+    for (const c of columns) {
+      const len = c.name.length + c.dataType.length + 5;
+      if (len > maxLen) maxLen = len;
+    }
+    return Math.max(220, maxLen * 8.5 + 40);
+  }
+
   // PASSO 1: Entidades Regulares (Fortes) e Associativas
   step1_mapStrongEntities() {
-    const strongEntities = this.conceptual.entities.filter(e => e.type === 'strong' || e.type === 'associative');
+    let strongEntities = this.conceptual.entities.filter(e => e.type === 'strong' || e.type === 'associative');
+
+    // Ignora entidades que são subclasses ou superclasses, pois serão processadas no passo 7
+    if (this.conceptual.hierarchies) {
+      const hierEntityIds = new Set();
+      for (const h of this.conceptual.hierarchies) {
+        hierEntityIds.add(h.superEntityId);
+        h.subEntityIds.forEach(id => hierEntityIds.add(id));
+      }
+      strongEntities = strongEntities.filter(e => !hierEntityIds.has(e.id));
+    }
 
     for (const entity of strongEntities) {
       const tableId = entity.id; // Deterministic ID
@@ -105,13 +129,72 @@ class RelationalMappingEngine {
         originEntityId: entity.id,
         x: entity.x,
         y: entity.y,
-        width: 220,
+        width: this.calculateTableWidth(entity.name, columns),
         height: Math.max(120, 45 + columns.length * 28),
         columns
       };
 
       this.logicalTables.set(tableId, table);
       this.entityToTableMap.set(entity.id, tableId);
+    }
+    
+    // PASSO 1B: Mapeia as arestas diretas que conectam Entidades Normais a Entidades Associativas
+    for (const edge of this.conceptual.edges) {
+      const nodeA = this.conceptual.entities.find(e => e.id === edge.fromNodeId);
+      const nodeB = this.conceptual.entities.find(e => e.id === edge.toNodeId);
+      if (nodeA && nodeB) {
+        // Encontra qual é a entidade associativa (lado N) e qual é a entidade regular (lado 1)
+        let assoc = null;
+        let regular = null;
+        if (nodeA.type === 'associative' && nodeB.type !== 'associative') { assoc = nodeA; regular = nodeB; }
+        else if (nodeB.type === 'associative' && nodeA.type !== 'associative') { assoc = nodeB; regular = nodeA; }
+        
+        if (assoc && regular) {
+          const assocTableId = this.entityToTableMap.get(assoc.id);
+          const regularTableId = this.entityToTableMap.get(regular.id);
+          if (!assocTableId || !regularTableId) continue;
+          
+          const assocTable = this.logicalTables.get(assocTableId);
+          const regularTable = this.logicalTables.get(regularTableId);
+          const regularPKs = regularTable.columns.filter(c => c.isPrimaryKey);
+          
+          for (const pk of regularPKs) {
+            const fkColId = `fk_assoc_${pk.id}_${assoc.id}`;
+            const fkColName = `${regularTable.name}_${pk.name}`;
+            
+            if (!assocTable.columns.find(c => c.id === fkColId || c.name === fkColName)) {
+              assocTable.columns.push({
+                id: fkColId,
+                name: fkColName,
+                dataType: pk.dataType,
+                isPrimaryKey: true, // FK forma a PK composta da associativa
+                isForeignKey: true,
+                isNullable: false,
+                isUnique: false,
+                references: {
+                  tableId: regularTable.id,
+                  tableName: regularTable.name,
+                  columnName: pk.name
+                }
+              });
+              
+              // Atualiza height e width com a nova coluna
+              assocTable.height = Math.max(120, 45 + assocTable.columns.length * 28);
+              assocTable.width = this.calculateTableWidth(assocTable.name, assocTable.columns);
+              
+              this.logicalRelationships.push({
+                id: `rel_assoc_${edge.id}_${pk.id}`,
+                sourceTableId: regularTable.id,
+                targetTableId: assocTable.id,
+                sourceColumnId: pk.id,
+                targetColumnId: fkColId,
+                cardinalitySource: '1..1',
+                cardinalityTarget: '0..N'
+              });
+            }
+          }
+        }
+      }
     }
   }
 

@@ -245,11 +245,14 @@
     <div id="canvasViewport" class="canvas-viewport">
       <svg id="svgRoot" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <marker id="crowsfoot-many" markerWidth="20" markerHeight="20" refX="18" refY="10" orient="auto">
-            <path d="M 0,4 L 18,10 L 0,16 M 18,3 L 18,17" fill="none" stroke="#94a3b8" stroke-width="1.8"/>
+          <!-- ONE side: || (Mandatory One) -->
+          <marker id="crowsfoot-one" markerWidth="24" markerHeight="20" refX="24" refY="10" orient="auto-start-reverse">
+            <path d="M 0,10 L 24,10 M 12,2 L 12,18 M 18,2 L 18,18" fill="none" stroke="#94a3b8" stroke-width="1.8"/>
           </marker>
-          <marker id="crowsfoot-one" markerWidth="20" markerHeight="20" refX="18" refY="10" orient="auto">
-            <path d="M 12,4 L 12,16 M 18,4 L 18,16" fill="none" stroke="#94a3b8" stroke-width="1.8"/>
+          <!-- MANY side: >O (Zero or Many) -->
+          <marker id="crowsfoot-many" markerWidth="24" markerHeight="20" refX="24" refY="10" orient="auto">
+            <path d="M 0,10 L 6,10 M 14,10 L 24,2 M 14,10 L 24,18 M 14,10 L 24,10" fill="none" stroke="#94a3b8" stroke-width="1.8"/>
+            <circle cx="10" cy="10" r="4" fill="none" stroke="#94a3b8" stroke-width="1.8"/>
           </marker>
         </defs>
         <g id="viewportGroup" transform="matrix(1 0 0 1 0 0)">

@@ -998,8 +998,12 @@
         path.setAttribute('d', this.router.route(p1, p2, obstacles));
         path.setAttribute('fill', 'none'); path.setAttribute('stroke', '#475569');
         path.setAttribute('stroke-width', '1.8');
-        path.setAttribute('marker-start', 'url(#crowsfoot-one)');
-        path.setAttribute('marker-end', 'url(#crowsfoot-many)');
+        
+        const startMarker = rel.cardinalitySource && rel.cardinalitySource.includes('N') ? 'url(#crowsfoot-many)' : 'url(#crowsfoot-one)';
+        const endMarker = rel.cardinalityTarget && rel.cardinalityTarget.includes('N') ? 'url(#crowsfoot-many)' : 'url(#crowsfoot-one)';
+        
+        path.setAttribute('marker-start', startMarker);
+        path.setAttribute('marker-end', endMarker);
         this.edgesLayer.appendChild(path);
       }
 
