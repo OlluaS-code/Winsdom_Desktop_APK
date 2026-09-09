@@ -9,16 +9,36 @@ class PrismaTranspiler {
 
     for (const table of logicalModel.tables) {
       schema += `model ${this.capitalize(table.name)} {\n`;
+      
+      const pks = table.columns.filter(c => c.isPrimaryKey);
+      const isComposite = pks.length > 1;
+
       for (const col of table.columns) {
         let type = this.mapPrismaType(col.dataType);
         let attributes = '';
-        if (col.isPrimaryKey) attributes += ' @id @default(autoincrement())';
-        if (col.isUnique && !col.isPrimaryKey) attributes += ' @unique';
-        if (col.isForeignKey && col.references) {
-          attributes += ` @relation(fields: [${col.name}], references: [${col.references.columnName}])`;
+        
+        if (col.isPrimaryKey && !isComposite) {
+           attributes += ' @id';
+           if (type === 'Int' && !col.isForeignKey) attributes += ' @default(autoincrement())';
         }
+        
+        if (col.isUnique && !col.isPrimaryKey) attributes += ' @unique';
+        
         schema += `  ${col.name.padEnd(20)} ${type}${col.isNullable && !col.isPrimaryKey ? '?' : ''}${attributes}\n`;
       }
+      
+      // Relation fields
+      const fks = table.columns.filter(c => c.isForeignKey && c.references);
+      for (const fk of fks) {
+        const refTable = this.capitalize(fk.references.tableName);
+        const relName = `${table.name}_${fk.name}`;
+        schema += `  rel_${fk.name.padEnd(16)} ${refTable} @relation("${relName}", fields: [${fk.name}], references: [${fk.references.columnName}])\n`;
+      }
+
+      if (isComposite) {
+        schema += `\n  @@id([${pks.map(c => c.name).join(', ')}])\n`;
+      }
+      
       schema += `}\n\n`;
     }
     return schema;

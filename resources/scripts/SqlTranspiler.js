@@ -237,7 +237,13 @@ class SqlTranspiler {
         const constraintName = `fk_${fk.sourceTable}_${fk.columnName}`;
         ddl += `ALTER TABLE ${fk.sourceTable} ADD CONSTRAINT ${constraintName} `;
         ddl += `FOREIGN KEY (${fk.columnName}) REFERENCES ${fk.targetTable}(${fk.targetColumn}) `;
-        ddl += `ON DELETE ${onDelete} ON UPDATE ${onUpdate};\n`;
+        ddl += `ON DELETE ${onDelete} ON UPDATE ${onUpdate}`;
+        
+        // Em Postgres e Oracle, deferrable resolve paradoxos de insercao circular
+        if (dialect === 'postgres') {
+          ddl += ` DEFERRABLE INITIALLY DEFERRED`;
+        }
+        ddl += `;\n`;
       }
       ddl += '\n';
     }

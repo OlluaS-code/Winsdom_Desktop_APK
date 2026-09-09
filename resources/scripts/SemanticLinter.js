@@ -14,6 +14,8 @@ class SemanticLinter {
     this.checkFanTraps();
     this.checkChasmTraps();
     this.checkReferentialCycles();
+    this.checkDisconnectedGraphs();
+    this.checkCyclicInheritance();
     return this.diagnostics;
   }
 
@@ -161,6 +163,79 @@ class SemanticLinter {
 
     for (const ent of this.model.entities) {
       if (!visited.has(ent.id)) dfs(ent.id, [ent.name]);
+    }
+  }
+
+  // 6. Deteção de Subgrafos Desconexos (Disjoint-Set)
+  checkDisconnectedGraphs() {
+    const nodes = [...this.model.entities, ...this.model.relationships].map(n => n.id);
+    if (nodes.length <= 1) return;
+    
+    const parent = new Map();
+    nodes.forEach(n => parent.set(n, n));
+    
+    const find = (i) => {
+      if (parent.get(i) === i) return i;
+      const root = find(parent.get(i));
+      parent.set(i, root);
+      return root;
+    };
+    
+    const union = (i, j) => {
+      const rootI = find(i);
+      const rootJ = find(j);
+      if (rootI !== rootJ) parent.set(rootI, rootJ);
+    };
+
+    const edges = this.model.edges || [];
+    for (const edge of edges) {
+      if (parent.has(edge.fromNodeId) && parent.has(edge.toNodeId)) {
+        union(edge.fromNodeId, edge.toNodeId);
+      }
+    }
+
+    const roots = new Set();
+    for (const n of nodes) roots.add(find(n));
+
+    if (roots.size > 1) {
+      this.addDiagnostic(
+        'LINT_DISCONNECTED', 'INFO',
+        `Fragmentação detectada: O diagrama possui ${roots.size} subgrafos isolados que não se conectam entre si.`,
+        null
+      );
+    }
+  }
+
+  // 7. Herança Cíclica (DFS Tricolor)
+  checkCyclicInheritance() {
+    const hierarchies = this.model.hierarchies || [];
+    const adj = new Map();
+    
+    for (const h of hierarchies) {
+      if (!adj.has(h.superEntityId)) adj.set(h.superEntityId, []);
+      for (const sub of h.subEntityIds) {
+        adj.get(h.superEntityId).push(sub);
+      }
+    }
+
+    const colors = new Map(); // 0: Branco, 1: Cinza, 2: Preto
+    
+    const dfs = (node) => {
+      colors.set(node, 1);
+      for (const sub of (adj.get(node) || [])) {
+        const c = colors.get(sub) || 0;
+        if (c === 1) {
+          this.addDiagnostic('LINT_CYCLE_INHERIT', 'ERROR', 'Ciclo de herança detectado.', node);
+          return true;
+        }
+        if (c === 0 && dfs(sub)) return true;
+      }
+      colors.set(node, 2);
+      return false;
+    };
+
+    for (const node of adj.keys()) {
+      if (!colors.has(node)) dfs(node);
     }
   }
 }

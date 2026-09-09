@@ -99,16 +99,6 @@ class RelationalMappingEngine {
   step1_mapStrongEntities() {
     let strongEntities = this.conceptual.entities.filter(e => e.type === 'strong' || e.type === 'associative');
 
-    // Ignora entidades que são subclasses ou superclasses, pois serão processadas no passo 7
-    if (this.conceptual.hierarchies) {
-      const hierEntityIds = new Set();
-      for (const h of this.conceptual.hierarchies) {
-        hierEntityIds.add(h.superEntityId);
-        h.subEntityIds.forEach(id => hierEntityIds.add(id));
-      }
-      strongEntities = strongEntities.filter(e => !hierEntityIds.has(e.id));
-    }
-
     for (const entity of strongEntities) {
       const tableId = entity.id; // Deterministic ID
       const flatAttrs = this.flattenAttributes(entity.id);
@@ -189,7 +179,9 @@ class RelationalMappingEngine {
                 sourceColumnId: pk.id,
                 targetColumnId: fkColId,
                 cardinalitySource: '1..1',
-                cardinalityTarget: '0..N'
+                cardinalityTarget: '0..N',
+                onDelete: 'CASCADE', // Entidades associativas (fracas por definição de chave) colapsam se o nó ancorar for apagado
+                onUpdate: 'CASCADE'
               });
             }
           }
@@ -268,7 +260,9 @@ class RelationalMappingEngine {
             sourceColumnId: pk.id,
             targetColumnId: fkColumnId,
             cardinalitySource: '1..1',
-            cardinalityTarget: '0..N'
+            cardinalityTarget: '0..N',
+            onDelete: 'CASCADE', // Entidades fracas colapsam se o nó ancorar for apagado
+            onUpdate: 'CASCADE'
           });
         }
       }
@@ -311,10 +305,14 @@ class RelationalMappingEngine {
         let targetTable = tableA;
         let sourceTable = tableB;
         let isSourceNullable = edges[0].cardinalityMin === 0;
+        let mutualTotal = false;
 
         if (edges[1].cardinalityMin === 1 && edges[0].cardinalityMin === 0) {
           targetTable = tableB;
           sourceTable = tableA;
+          isSourceNullable = false;
+        } else if (edges[0].cardinalityMin === 1 && edges[1].cardinalityMin === 1) {
+          mutualTotal = true; // Paradoxo 1:1 - DEFERRABLE
           isSourceNullable = false;
         }
 
@@ -327,6 +325,7 @@ class RelationalMappingEngine {
             dataType: pk.dataType,
             isPrimaryKey: false,
             isForeignKey: true,
+            isDeferredFK: mutualTotal, // DEFERRABLE se participacao total mutua
             isNullable: isSourceNullable,
             isUnique: true,
             references: {
@@ -343,7 +342,9 @@ class RelationalMappingEngine {
             sourceColumnId: pk.id,
             targetColumnId: fkColId,
             cardinalitySource: '1..1',
-            cardinalityTarget: '0..1'
+            cardinalityTarget: '0..1',
+            onDelete: isSourceNullable ? 'SET NULL' : 'RESTRICT', // Heuristica de risco fisico
+            onUpdate: 'CASCADE'
           });
         }
 
@@ -384,18 +385,18 @@ class RelationalMappingEngine {
 
           const tableMany = this.logicalTables.get(tableManyId);
           const tableOne = this.logicalTables.get(tableOneId);
+          const isNullable = edgeMany.cardinalityMin === 0;
 
-          const pkColumns = tableOne.columns.filter(c => c.isPrimaryKey);
-
-          for (const pk of pkColumns) {
-            const fkColId = `fk_${pk.id}_${tableMany.id}_${rel.id}`;
+          const sourcePKs = tableOne.columns.filter(c => c.isPrimaryKey);
+          for (const pk of sourcePKs) {
+            const fkColId = `fk_${pk.id}_${tableManyId}`;
             tableMany.columns.push({
               id: fkColId,
               name: `${tableOne.name}_${pk.name}`,
               dataType: pk.dataType,
               isPrimaryKey: false,
               isForeignKey: true,
-              isNullable: edgeMany.cardinalityMin === 0,
+              isNullable: isNullable,
               isUnique: false,
               references: {
                 tableId: tableOne.id,
@@ -411,7 +412,9 @@ class RelationalMappingEngine {
               sourceColumnId: pk.id,
               targetColumnId: fkColId,
               cardinalitySource: edgeOne.cardinalityMin === 1 ? '1..1' : '0..1',
-              cardinalityTarget: edgeMany.cardinalityMin === 1 ? '1..N' : '0..N'
+              cardinalityTarget: edgeMany.cardinalityMin === 1 ? '1..N' : '0..N',
+              onDelete: isNullable ? 'SET NULL' : 'RESTRICT', // Heuristica: previne erro de multiplas cascatas
+              onUpdate: 'CASCADE'
             });
           }
 
