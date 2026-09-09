@@ -697,9 +697,10 @@
     }
 
     findNodeById(id) {
-      return this.conceptualModel.entities.find(e => e.id === id) ||
-             this.conceptualModel.relationships.find(r => r.id === id) ||
-             this.conceptualModel.hierarchies.find(h => h.id === id);
+      return (this.conceptualModel.entities && this.conceptualModel.entities.find(e => e.id === id)) ||
+             (this.conceptualModel.relationships && this.conceptualModel.relationships.find(r => r.id === id)) ||
+             (this.conceptualModel.hierarchies && this.conceptualModel.hierarchies.find(h => h.id === id)) ||
+             (this.conceptualModel.attributes && this.conceptualModel.attributes.find(a => a.id === id));
     }
 
     // ─── TRANSFORMATION ───────────────────────────────────
