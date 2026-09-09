@@ -25,6 +25,8 @@
       this.selectedNodeId = null;
       this.selectedNodeType = null;
       this.selectedEdgeId = null;
+      this.selectedGroup = new Set();
+      this.isSpacePressed = false;
 
       this.edgeMode = false;
       this.edgeSourceId = null;
@@ -64,40 +66,112 @@
       this.toolsAside = document.getElementById('conceptualTools');
     }
 
-    // ─── PAN & ZOOM (só ativa quando NÃO arrastando nó) ──
+    // ─── PAN & ZOOM E MARQUEE SELECTION ─────────────────
     initPanAndZoom() {
       let isPanning = false;
+      let isMarquee = false;
       let startX = 0, startY = 0;
+      let mStartX = 0, mStartY = 0;
+      
+      const ns = 'http://www.w3.org/2000/svg';
+      this.marqueeRect = document.createElementNS(ns, 'rect');
+      this.marqueeRect.setAttribute('fill', 'rgba(56, 189, 248, 0.15)');
+      this.marqueeRect.setAttribute('stroke', '#38bdf8');
+      this.marqueeRect.setAttribute('stroke-width', '1');
+      this.marqueeRect.setAttribute('stroke-dasharray', '4');
+      this.marqueeRect.style.display = 'none';
+      this.marqueeRect.style.pointerEvents = 'none';
+      // Anexa o marquee no viewportGroup para estar na mesma escala dos nós
+      this.viewportGroup.appendChild(this.marqueeRect);
 
       this.canvasViewport.addEventListener('pointerdown', (e) => {
-        // Se clicou em um nó interativo, não faz pan
-        if (e.target.closest('.interactive-node')) return;
+        // Se clicou em um nó interativo, não faz pan nem marquee
+        if (e.target.closest('.interactive-node')) {
+           const nodeId = e.target.closest('.interactive-node').getAttribute('data-node-id');
+           if (!this.selectedGroup.has(nodeId)) {
+               this.selectedGroup.clear(); // Limpa seleção de grupo se clicou em um nó de fora
+               this.selectedGroup.add(nodeId);
+           }
+           return;
+        }
         if (this.edgeMode) return;
 
-        isPanning = true;
-        startX = e.clientX - this.tx;
-        startY = e.clientY - this.ty;
+        if (this.isSpacePressed) {
+          isPanning = true;
+          this.canvasViewport.style.cursor = 'grabbing';
+          startX = e.clientX - this.tx;
+          startY = e.clientY - this.ty;
+        } else {
+          isMarquee = true;
+          const globalPoint = this.screenToGlobal(e.clientX, e.clientY);
+          mStartX = globalPoint.x;
+          mStartY = globalPoint.y;
+          this.marqueeRect.setAttribute('x', mStartX);
+          this.marqueeRect.setAttribute('y', mStartY);
+          this.marqueeRect.setAttribute('width', '0');
+          this.marqueeRect.setAttribute('height', '0');
+          this.marqueeRect.style.display = 'block';
+          this.deselectAll(); // Clicou no vazio sem espaço = limpa tudo
+        }
         this.canvasViewport.setPointerCapture(e.pointerId);
-
-        // Clicou no vazio: deseleciona tudo
-        this.deselectAll();
       });
 
       this.canvasViewport.addEventListener('pointermove', (e) => {
-        if (!isPanning) return;
-        this.tx = e.clientX - startX;
-        this.ty = e.clientY - startY;
-        this.applyTransform();
+        if (isPanning) {
+          this.tx = e.clientX - startX;
+          this.ty = e.clientY - startY;
+          this.applyTransform();
+        } else if (isMarquee) {
+          const globalPoint = this.screenToGlobal(e.clientX, e.clientY);
+          const x = Math.min(mStartX, globalPoint.x);
+          const y = Math.min(mStartY, globalPoint.y);
+          const w = Math.abs(globalPoint.x - mStartX);
+          const h = Math.abs(globalPoint.y - mStartY);
+          this.marqueeRect.setAttribute('x', x);
+          this.marqueeRect.setAttribute('y', y);
+          this.marqueeRect.setAttribute('width', w);
+          this.marqueeRect.setAttribute('height', h);
+        }
       });
 
-      const stopPan = (e) => {
+      const stopPanOrMarquee = (e) => {
         if (isPanning) {
           isPanning = false;
-          try { this.canvasViewport.releasePointerCapture(e.pointerId); } catch (_) {}
+          this.canvasViewport.style.cursor = this.isSpacePressed ? 'grab' : 'default';
         }
+        if (isMarquee) {
+          isMarquee = false;
+          this.marqueeRect.style.display = 'none';
+          
+          const x = parseFloat(this.marqueeRect.getAttribute('x'));
+          const y = parseFloat(this.marqueeRect.getAttribute('y'));
+          const w = parseFloat(this.marqueeRect.getAttribute('width'));
+          const h = parseFloat(this.marqueeRect.getAttribute('height'));
+          
+          // Se a caixa for muito pequena, ignora (foi só um click solto)
+          if (w > 5 || h > 5) {
+             const allItems = [...this.conceptualModel.entities, ...this.conceptualModel.relationships, ...this.conceptualModel.attributes, ...this.conceptualModel.hierarchies];
+             for (const item of allItems) {
+               // Uma verificação AABB (Bounding Box) simples
+               const ix = item.x || 0;
+               const iy = item.y || 0;
+               // Verifica se o ponto (ou uma caixa aproximada do nó) cai dentro da seleção
+               // Utilizando o centro do nó para facilitar
+               const cx = ix + (item.width || 100)/2;
+               const cy = iy + (item.height || 70)/2;
+               
+               if (cx >= x && cx <= x + w && cy >= y && cy <= y + h) {
+                  this.selectedGroup.add(item.id);
+               }
+             }
+             this.render(); // Para atualizar os destaques visuais
+          }
+        }
+        try { this.canvasViewport.releasePointerCapture(e.pointerId); } catch (_) {}
       };
-      this.canvasViewport.addEventListener('pointerup', stopPan);
-      this.canvasViewport.addEventListener('pointercancel', stopPan);
+
+      this.canvasViewport.addEventListener('pointerup', stopPanOrMarquee);
+      this.canvasViewport.addEventListener('pointercancel', stopPanOrMarquee);
 
       this.canvasViewport.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -148,6 +222,7 @@
       this.selectedNodeId = null;
       this.selectedNodeType = null;
       this.selectedEdgeId = null;
+      this.selectedGroup.clear();
       this.propsPanel.classList.remove('visible');
       this.render();
     }
@@ -208,13 +283,28 @@
         });
       }
 
-      // Drag global: movimenta o nó sendo arrastado SEM re-render
+      // Drag global: movimenta os nós sendo arrastados SEM re-render
       document.addEventListener('pointermove', (e) => {
         if (!this._dragging) return;
         const mouse = this.screenToGlobal(e.clientX, e.clientY);
+        
+        if (Array.isArray(this._dragging)) {
+           this._dragging.forEach(item => {
+              item.nodeData.x = mouse.x - item.offsetX;
+              item.nodeData.y = mouse.y - item.offsetY;
+              item.svgElement.setAttribute('transform', `translate(${item.nodeData.x}, ${item.nodeData.y})`);
+              
+              if (this.activeTab === 'logical') {
+                this.updateLogicalEdgesForNode(item.nodeData.id);
+              } else {
+                this.updateEdgesForNode(item.nodeData.id);
+              }
+           });
+           return;
+        }
+
         this._dragging.nodeData.x = mouse.x - this._dragging.offsetX;
         this._dragging.nodeData.y = mouse.y - this._dragging.offsetY;
-        // Patch direto: só muda o transform do elemento arrastado
         this._dragging.svgElement.setAttribute('transform',
           `translate(${this._dragging.nodeData.x}, ${this._dragging.nodeData.y})`);
         
@@ -236,8 +326,14 @@
 
     bindKeyboard() {
       document.addEventListener('keydown', (e) => {
-        // Ignorar se digitando em input/textarea
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+        
+        if (e.code === 'Space') {
+          e.preventDefault();
+          this.isSpacePressed = true;
+          this.canvasViewport.style.cursor = 'grab';
+        }
+
         if (e.ctrlKey && e.key === 'z') { e.preventDefault(); this.undo(); }
         if (e.ctrlKey && e.key === 'y') { e.preventDefault(); this.redo(); }
         if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -247,8 +343,15 @@
         if (e.key === 'Escape') {
           this.edgeMode = false;
           this.edgeSourceId = null;
-          this.canvasViewport.style.cursor = 'grab';
+          this.canvasViewport.style.cursor = 'default';
           this.deselectAll();
+        }
+      });
+
+      document.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+          this.isSpacePressed = false;
+          this.canvasViewport.style.cursor = 'default';
         }
       });
     }
@@ -651,6 +754,8 @@
     // ─── RENDER CONCEITUAL ────────────────────────────────
     renderConceptualModel() {
       const notation = this.notationSelect ? this.notationSelect.value : 'chen';
+      this.projector.selectedEdgeId = this.selectedEdgeId;
+      this.projector.selectedGroup = this.selectedGroup;
       this.projector.render(this.conceptualModel, notation);
 
       // Reattach event listeners to nodes
@@ -680,6 +785,12 @@
         g.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
           if (this.handleNodeClickForEdge(nodeId)) return;
+          
+          if (!this.selectedGroup.has(nodeId)) {
+             if (!e.shiftKey) this.selectedGroup.clear();
+             this.selectedGroup.add(nodeId);
+          }
+          
           this.selectedNodeId = nodeId;
           this.selectedNodeType = nodeType;
           this.showPropsForNode(nodeId, nodeType);
@@ -688,10 +799,22 @@
           const freshG = this.nodesLayer.querySelector(`[data-node-id="${nodeId}"]`);
           if (!freshG) return;
           const mouse = this.screenToGlobal(e.clientX, e.clientY);
-          this._dragging = {
-            svgElement: freshG, nodeData: nodeData,
-            offsetX: mouse.x - nodeData.x, offsetY: mouse.y - nodeData.y
-          };
+          
+          const dragItems = [];
+          this.selectedGroup.forEach(id => {
+             const nData = this.findNodeById(id);
+             const el = this.nodesLayer.querySelector(`[data-node-id="${id}"]`);
+             if (nData && el) {
+                dragItems.push({
+                   nodeData: nData,
+                   svgElement: el,
+                   offsetX: mouse.x - (nData.x || 0),
+                   offsetY: mouse.y - (nData.y || 0)
+                });
+             }
+          });
+          
+          this._dragging = dragItems;
         });
       });
 

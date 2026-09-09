@@ -35,14 +35,15 @@ class MultiNotationProjector {
 
     // Renderiza Entidades (Retângulos)
     for (const ent of entities) {
+      const isSelected = this.selectedGroup && this.selectedGroup.has(ent.id);
       const g = this.createGroup(ent.x, ent.y, ent.id);
       const rect = document.createElementNS(this.ns, 'rect');
       rect.setAttribute('width', '160');
       rect.setAttribute('height', '80');
       rect.setAttribute('rx', '4');
       rect.setAttribute('fill', '#1e293b');
-      rect.setAttribute('stroke', ent.type === 'weak' ? '#f59e0b' : (ent.type === 'associative' ? '#059669' : '#6366f1'));
-      rect.setAttribute('stroke-width', ent.type === 'weak' ? '4' : '2');
+      rect.setAttribute('stroke', isSelected ? '#f8fafc' : (ent.type === 'weak' ? '#f59e0b' : (ent.type === 'associative' ? '#059669' : '#6366f1')));
+      rect.setAttribute('stroke-width', isSelected ? '3' : (ent.type === 'weak' ? '4' : '2'));
       if (ent.type === 'weak') rect.setAttribute('stroke-dasharray', '6,3');
       g.appendChild(rect);
 
@@ -99,12 +100,13 @@ class MultiNotationProjector {
 
     // Renderiza Relacionamentos (Losangos)
     for (const rel of relationships) {
+      const isSelected = this.selectedGroup && this.selectedGroup.has(rel.id);
       const g = this.createGroup(rel.x, rel.y, rel.id);
       const poly = document.createElementNS(this.ns, 'polygon');
       poly.setAttribute('points', '50,0 100,35 50,70 0,35');
       poly.setAttribute('fill', '#0f172a');
-      poly.setAttribute('stroke', '#10b981');
-      poly.setAttribute('stroke-width', '2');
+      poly.setAttribute('stroke', isSelected ? '#f8fafc' : '#10b981');
+      poly.setAttribute('stroke-width', isSelected ? '3' : '2');
 
       const text = this.createText(50, 39, rel.name, '#f8fafc', '11px', '500');
       g.appendChild(poly);
@@ -198,6 +200,7 @@ class MultiNotationProjector {
     const edges = model.edges || [];
 
     for (const ent of entities) {
+      const isSelected = this.selectedGroup && this.selectedGroup.has(ent.id);
       const attrs = attributes.filter(a => a.parentId === ent.id);
       const h = Math.max(90, 36 + attrs.length * 18);
       const g = this.createGroup(ent.x, ent.y, ent.id);
@@ -207,8 +210,8 @@ class MultiNotationProjector {
       rect.setAttribute('height', h);
       rect.setAttribute('rx', '6');
       rect.setAttribute('fill', '#1e293b');
-      rect.setAttribute('stroke', ent.type === 'associative' ? '#10b981' : '#38bdf8');
-      rect.setAttribute('stroke-width', '2');
+      rect.setAttribute('stroke', isSelected ? '#f8fafc' : (ent.type === 'associative' ? '#10b981' : '#38bdf8'));
+      rect.setAttribute('stroke-width', isSelected ? '3' : '2');
       g.appendChild(rect);
 
       // Divisória do Cabeçalho
@@ -232,6 +235,7 @@ class MultiNotationProjector {
 
     // Associações em Elipse com Notação Estrutural (min, max)
     for (const rel of relationships) {
+      const isSelected = this.selectedGroup && this.selectedGroup.has(rel.id);
       const g = this.createGroup(rel.x, rel.y, rel.id);
       const ellipse = document.createElementNS(this.ns, 'ellipse');
       ellipse.setAttribute('cx', '55');
@@ -239,8 +243,8 @@ class MultiNotationProjector {
       ellipse.setAttribute('rx', '55');
       ellipse.setAttribute('ry', '28');
       ellipse.setAttribute('fill', '#0f172a');
-      ellipse.setAttribute('stroke', '#f43f5e');
-      ellipse.setAttribute('stroke-width', '2');
+      ellipse.setAttribute('stroke', isSelected ? '#f8fafc' : '#f43f5e');
+      ellipse.setAttribute('stroke-width', isSelected ? '3' : '2');
       g.appendChild(ellipse);
 
       const title = this.createText(55, 32, rel.name, '#f8fafc', '11px', '600');
