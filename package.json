@@ -14,14 +14,16 @@
     "dist": "electron-builder --win",
     "publish-win": "electron-builder --win -p always"
   },
-    "build": {
+  "build": {
     "appId": "com.winsdom.app",
     "productName": "Winsdom",
     "directories": {
       "output": "dist_installer"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "public/img/icons/icons/win/icon.ico"
     },
     "nsis": {
@@ -43,9 +45,9 @@
     "electron": "^39.2.7",
     "electron-builder": "^26.0.12",
     "electron-icon-maker": "^0.0.5",
-    "update-electron-app": "^3.0.0"
+    "electron-reload": "^2.0.0-alpha.1"
   },
   "dependencies": {
-    "electron-reload": "^2.0.0-alpha.1"
+    "electron-updater": "^6.8.9"
   }
 }
