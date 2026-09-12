@@ -107,10 +107,9 @@ Este projeto está licenciado sob a Licença MIT. Veja o arquivo LICENSE para ma
 ## Autor
 
 Desenvolvido por **Saullo Moura Tavares** (OlluaS-code).  
-Portfólio: [olluas-code.github.io](https://olluas-code.github.io/)  
+Portfólio: [olluas-code.github.io/dev.](https://olluas-code.github.io/dev./)  
 GitHub: [github.com/OlluaS-code](https://github.com/OlluaS-code)
 
 ---
 
-© 2026 Winsdom Desktop App. Desenvolvido com foco em performance e clareza.</content>
-<parameter name="filePath">c:\Users\smour\Desktop\Winsdom_Desktop_APK\README.md
+© 2026 Winsdom Desktop App. Desenvolvido com foco em performance e clareza.

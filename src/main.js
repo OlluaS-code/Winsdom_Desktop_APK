@@ -7,9 +7,11 @@ const {
   nativeTheme,
   ipcMain,
   shell,
+  dialog,
 } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
+const { autoUpdater } = require("electron-updater");
 
 // 1. Garantir Instância Única
 const gotTheLock = app.requestSingleInstanceLock();
@@ -27,12 +29,52 @@ if (process.argv[2] === "--dev") {
     hardResetMethod: "exit",
   });
 } else {
+  // Configuração e inicialização do auto-update para ambiente de produção
   if (app.isPackaged) {
-    try {
-      require("update-electron-app")();
-    } catch (error) {
-      console.error("Erro ao carregar o auto-update:", error);
-    }
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+
+    autoUpdater.on("checking-for-update", () => {
+      console.log("[AutoUpdater] Procurando atualizações...");
+    });
+
+    autoUpdater.on("update-available", (info) => {
+      console.log(`[AutoUpdater] Nova versão encontrada: ${info.version}. Iniciando download...`);
+    });
+
+    autoUpdater.on("update-not-available", (info) => {
+      console.log(`[AutoUpdater] App está atualizado. Versão: ${info.version}`);
+    });
+
+    autoUpdater.on("error", (err) => {
+      console.error("[AutoUpdater] Erro ao atualizar:", err);
+    });
+
+    autoUpdater.on("update-downloaded", (info) => {
+      dialog
+        .showMessageBox({
+          type: "info",
+          title: "Atualização Disponível",
+          message: `Uma nova versão do Winsdom (v${info.version}) foi baixada!`,
+          detail: "Deseja reiniciar o aplicativo agora para aplicar as atualizações?",
+          buttons: ["Reiniciar e Atualizar", "Depois"],
+          defaultId: 0,
+          cancelId: 1,
+        })
+        .then((result) => {
+          if (result.response === 0) {
+            autoUpdater.quitAndInstall();
+          }
+        });
+    });
+
+    app.whenReady().then(() => {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) => {
+          console.error("[AutoUpdater] Erro ao buscar atualizações:", err);
+        });
+      }, 3000);
+    });
   }
 }
 
