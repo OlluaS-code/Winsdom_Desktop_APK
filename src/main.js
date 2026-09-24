@@ -182,7 +182,10 @@ function setupSecurityGuards(window) {
   });
 
   window.webContents.on("will-navigate", (event, url) => {
-    if (url !== window.webContents.getURL()) {
+    const currentBaseUrl = window.webContents.getURL().split('#')[0];
+    const targetBaseUrl = url.split('#')[0];
+    
+    if (targetBaseUrl !== currentBaseUrl) {
       event.preventDefault();
       if (url.startsWith("https:") || url.startsWith("http:")) {
         shell.openExternal(url);
@@ -241,6 +244,14 @@ function createOrFocusWindow(moduleId, htmlFile, discipline, windowOptions = {})
   return win;
 }
 
+function Home() {
+  createOrFocusWindow("home", "Home.html", null, {
+    width: 800,
+    height: 600,
+    title: "Winsdom - Hub Central"
+  });
+}
+
 function About() {
   createOrFocusWindow("about", "About.html", null);
 }
@@ -264,10 +275,12 @@ app.whenReady().then(() => {
   const iconPath = path.join(__dirname, "../public/img/WinsdomIcon.png");
   const icon = nativeImage.createFromPath(iconPath);
 
+  Home(); // Abre o Hub Central ao iniciar
+
   try {
     tray = new Tray(icon);
     const contextMenu = Menu.buildFromTemplate([
-      { label: "Sobre", click: About },
+      { label: "Hub Central", click: Home },
       { type: "separator" },
       { label: "Biologia", click: Biology },
       { label: "Matemática", click: MathWindow },
@@ -283,14 +296,41 @@ app.whenReady().then(() => {
   }
 });
 
+app.on("second-instance", () => {
+  const homeWin = openWindows.get("home");
+  if (homeWin) {
+    if (homeWin.isMinimized()) homeWin.restore();
+    homeWin.focus();
+  } else {
+    Home();
+  }
+});
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    // Mantemos aberto porque o tray está gerenciando
+    // Se o tray não tiver carregado (ex: linux s/ libappindicator), previne processo zumbi
+    if (!tray) {
+      app.quit();
+    }
   }
 });
 
 app.on("activate", () => {
-  if (openWindows.size === 0) About();
+  if (openWindows.size === 0) Home();
+});
+
+// IPC Handler para abrir módulos a partir do Hub
+ipcMain.handle("open-module", (_event, moduleName) => {
+  if (moduleName === "biology") Biology();
+  if (moduleName === "math") MathWindow();
+  if (moduleName === "it") ITWindow();
+  if (moduleName === "fq") createOrFocusWindow("fq", "FisicoQuimica.html", null, { title: "Física & Química" });
+  if (moduleName === "gh") createOrFocusWindow("gh", "GeoHistoria.html", null, { title: "Geografia & História" });
+  if (moduleName === "about") About();
+});
+
+ipcMain.handle("app:open-external", (_event, url) => {
+  shell.openExternal(url);
 });
 
 // 4. Operações Atômicas de Persistência via IPC Invoke/Handle
@@ -316,6 +356,18 @@ ipcMain.handle("storage:read", async (_event, filename) => {
     return { success: true, data: JSON.parse(data) };
   } catch (error) {
     if (error.code === "ENOENT") return { success: true, data: null };
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("storage:delete", async (_event, filename) => {
+  try {
+    const sanitizedFilename = path.basename(filename).replace(/[^a-zA-Z0-9_-]/g, "");
+    const filePath = path.join(app.getPath("userData"), "app_data", `${sanitizedFilename}.json`);
+    await fs.unlink(filePath);
+    return { success: true };
+  } catch (error) {
+    if (error.code === "ENOENT") return { success: true }; // Já não existe
     return { success: false, error: error.message };
   }
 });

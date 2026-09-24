@@ -296,7 +296,10 @@ mmCanvas.addEventListener("dblclick", (e) => {
     input.focus();
     input.select();
 
+    let isSaved = false;
     const saveEdit = () => {
+      if (isSaved) return;
+      isSaved = true;
       clickedNode.text = input.value;
       input.remove();
       renderMindMap();
@@ -447,12 +450,12 @@ function renderGlossary(filter = "") {
   glossary
     .filter((g) => g.term.toLowerCase().includes(filter.toLowerCase()))
     .sort((a, b) => a.term.localeCompare(b.term))
-    .forEach((item, index) => {
+    .forEach((item) => {
       list.innerHTML += `
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group relative">
                         <h4 class="text-lg font-bold text-indigo-700 mb-1">${item.term}</h4>
                         <p class="text-gray-600 leading-relaxed text-sm">${item.def}</p>
-                        <button onclick="deleteGlossary(${index})" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-trash"></i></button>
+                        <button onclick="deleteGlossary('${item.term.replace(/'/g, "\\'")}')" class="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-trash"></i></button>
                     </div>`;
     });
 }
@@ -466,11 +469,14 @@ function addGlossaryTerm() {
     toggleModal("gl-modal");
   }
 }
-function deleteGlossary(index) {
+function deleteGlossary(targetTerm) {
   if (confirm("Remover termo?")) {
-    glossary.splice(index, 1);
-    localStorage.setItem("gl_terms", JSON.stringify(glossary));
-    renderGlossary();
+    const idx = glossary.findIndex(g => g.term === targetTerm);
+    if (idx !== -1) {
+      glossary.splice(idx, 1);
+      localStorage.setItem("gl_terms", JSON.stringify(glossary));
+      renderGlossary();
+    }
   }
 }
 document

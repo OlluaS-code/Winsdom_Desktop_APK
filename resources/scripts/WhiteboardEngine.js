@@ -1,36 +1,41 @@
+/**
+ * Motor vetorial 2D HiDPI com tratamento de eventos coalescidos e pilha de Undo/Redo limitada.
+ */
 class WhiteboardEngine {
   constructor(canvasElement, options = {}) {
     this.canvas = canvasElement;
     this.ctx = this.canvas.getContext('2d');
-    
-    // Configurações de Traço
-    this.tool = 'pen'; // 'pen' | 'eraser'
+
+    this.tool = 'pen';
     this.strokeColor = '#1e293b';
     this.strokeSize = 3;
 
-    // Pilhas do Command Pattern (Vetoriais)
+    // Pilhas com limite de tamanho para conter consumo excessivo de memória RAM
     this.commands = [];
     this.undoneCommands = [];
+    this.MAX_HISTORY = 40;
+
     this.activeStroke = null;
     this.isDrawing = false;
+    this.dpr = window.devicePixelRatio || 1;
 
     this.initDpiAwareCanvas();
     this.bindEvents();
   }
 
   initDpiAwareCanvas() {
-    const rect = this.canvas.parentElement.getBoundingClientRect();
+    const parent = this.canvas.parentElement;
+    if (!parent) return;
+
+    const rect = parent.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
 
-    // Resolução física do buffer
     this.canvas.width = rect.width * dpr;
     this.canvas.height = rect.height * dpr;
-
-    // Tamanho lógico no CSS
     this.canvas.style.width = `${rect.width}px`;
     this.canvas.style.height = `${rect.height}px`;
 
-    // Normalização das coordenadas de desenho
+    this.ctx.resetTransform();
     this.ctx.scale(dpr, dpr);
     this.ctx.lineCap = 'round';
     this.ctx.lineJoin = 'round';
@@ -61,16 +66,14 @@ class WhiteboardEngine {
     this.canvas.addEventListener('pointermove', (e) => {
       if (!this.isDrawing || !this.activeStroke) return;
 
-      // Recupera eventos coalescidos pelo driver da caneta/mouse
-      const rawEvents = typeof e.getCoalescedEvents === 'function' 
-        ? e.getCoalescedEvents() 
+      const rawEvents = typeof e.getCoalescedEvents === 'function'
+        ? e.getCoalescedEvents()
         : [e];
 
-      for (const event of rawEvents) {
-        const pt = this.getLogicalCoordinates(event);
+      for (let i = 0; i < rawEvents.length; i++) {
+        const pt = this.getLogicalCoordinates(rawEvents[i]);
         this.activeStroke.points.push(pt);
 
-        // Renderização imediata do segmento
         this.ctx.strokeStyle = this.activeStroke.color;
         this.ctx.lineWidth = this.activeStroke.size;
         this.ctx.lineTo(pt.x, pt.y);
@@ -85,7 +88,10 @@ class WhiteboardEngine {
 
       if (this.activeStroke && this.activeStroke.points.length > 0) {
         this.commands.push(this.activeStroke);
-        this.undoneCommands = []; // Descarta pilha de refazer
+        if (this.commands.length > this.MAX_HISTORY) {
+          this.commands.shift(); // Evita vazamento de memória liberando traços antigos
+        }
+        this.undoneCommands = [];
       }
       this.activeStroke = null;
     };
@@ -103,14 +109,14 @@ class WhiteboardEngine {
   }
 
   redrawAll() {
-    // Limpa tela considerando a resolução lógica
     const width = this.canvas.width / this.dpr;
     const height = this.canvas.height / this.dpr;
     this.ctx.clearRect(0, 0, width, height);
 
-    for (const cmd of this.commands) {
+    for (let i = 0; i < this.commands.length; i++) {
+      const cmd = this.commands[i];
       if (cmd.type === 'text') {
-        this.ctx.font = `${cmd.size}px Inter`;
+        this.ctx.font = `${cmd.size}px Inter, sans-serif`;
         this.ctx.fillStyle = cmd.color;
         this.ctx.textBaseline = "top";
         this.ctx.fillText(cmd.text, cmd.pos.x, cmd.pos.y);
@@ -124,8 +130,8 @@ class WhiteboardEngine {
       this.ctx.lineWidth = cmd.size;
       this.ctx.moveTo(cmd.points[0].x, cmd.points[0].y);
 
-      for (let i = 1; i < cmd.points.length; i++) {
-        this.ctx.lineTo(cmd.points[i].x, cmd.points[i].y);
+      for (let j = 1; j < cmd.points.length; j++) {
+        this.ctx.lineTo(cmd.points[j].x, cmd.points[j].y);
       }
       this.ctx.stroke();
       this.ctx.closePath();

@@ -146,6 +146,12 @@ class MultiNotationProjector {
           gEdge.appendChild(line);
           
           const text = this.createText((x1 + x2) / 2, (y1 + y2) / 2 - 8, `(${edge.cardinalityMin},${edge.cardinalityMax})`, '#cbd5e1', '12px', '700');
+          text.setAttribute('paint-order', 'stroke');
+          text.setAttribute('stroke', '#0f172a');
+          text.setAttribute('stroke-width', '4');
+          text.setAttribute('stroke-linecap', 'round');
+          text.setAttribute('stroke-linejoin', 'round');
+          text.classList.add('edge-label');
           gEdge.appendChild(text);
           
           this.edgesLayer.appendChild(gEdge);
@@ -285,6 +291,12 @@ class MultiNotationProjector {
           const labelX = x1 + (x2 - x1) * 0.5;
           const labelY = y1 + (y2 - y1) * 0.5 - 6;
           const text = this.createText(labelX, labelY, `(${edge.cardinalityMin},${edge.cardinalityMax})`, '#f43f5e', '11px', '700');
+          text.setAttribute('paint-order', 'stroke');
+          text.setAttribute('stroke', '#0f172a');
+          text.setAttribute('stroke-width', '4');
+          text.setAttribute('stroke-linecap', 'round');
+          text.setAttribute('stroke-linejoin', 'round');
+          text.classList.add('edge-label');
           gEdge.appendChild(text);
           
           this.edgesLayer.appendChild(gEdge);

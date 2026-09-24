@@ -141,17 +141,23 @@ class SemanticLinter {
     const visited = new Set();
     const recStack = new Set();
 
-    const dfs = (nodeId, path) => {
+    const dfs = (nodeId, parentNode, path) => {
       visited.add(nodeId);
       recStack.add(nodeId);
 
       for (const neighbor of adj.get(nodeId) || []) {
+        if (neighbor === parentNode) continue;
+        
         if (!visited.has(neighbor)) {
-          if (dfs(neighbor, [...path, neighbor])) return true;
+          if (dfs(neighbor, nodeId, [...path, neighbor])) return true;
         } else if (recStack.has(neighbor) && path.length > 2) {
+          const entNames = path.map(id => {
+            const e = this.model.entities.find(x => x.id === id);
+            return e ? e.name : '?';
+          }).join(' -> ');
           this.addDiagnostic(
             'LINT_CYCLE_CASCADE', 'ERROR',
-            `Ciclo referencial detectado: ${path.join(' -> ')} -> ${neighbor}.`,
+            `Ciclo referencial detectado: ${entNames} -> ${neighbor}.`,
             nodeId
           );
           return true;
@@ -162,7 +168,7 @@ class SemanticLinter {
     };
 
     for (const ent of this.model.entities) {
-      if (!visited.has(ent.id)) dfs(ent.id, [ent.name]);
+      if (!visited.has(ent.id)) dfs(ent.id, null, [ent.id]);
     }
   }
 

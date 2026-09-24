@@ -1,18 +1,28 @@
+/**
+ * SafeCalculator com padrão Singleton e escopo isolado para neutralizar
+ * riscos de Prototype Pollution e vazamentos de memória na análise de AST.
+ */
 class SafeCalculator {
   constructor() {
-    // Configurar escopo seguro desprovido de referências ao DOM ou Node.js
-    // Assume que a biblioteca mathjs foi carregada e expõe window.math
+    if (SafeCalculator.instance) {
+      return SafeCalculator.instance;
+    }
+
+    if (typeof window.math === 'undefined') {
+      throw new Error('A biblioteca Math.js deve ser carregada antes do SafeCalculator.');
+    }
+
     this.mathInstance = window.math.create(window.math.all, {});
-    this.customScope = {
+    this.customScope = Object.freeze({
       e: Math.E,
       pi: Math.PI
-    };
+    });
+
+    SafeCalculator.instance = this;
   }
 
-  /**
-   * Sanitiza a entrada substituindo caracteres da UI por notação matemática padrão
-   */
   normalizeExpression(rawInput) {
+    if (!rawInput) return '';
     return rawInput
       .replace(/×/g, '*')
       .replace(/÷/g, '/')
@@ -21,13 +31,12 @@ class SafeCalculator {
       .replace(/√(\d+(\.\d+)?)/g, 'sqrt($1)')
       .replace(/\^/g, '^')
       .replace(/º/g, ' deg')
+      .replace(/\bln\(/g, 'log(')
+      .replace(/(\d+(?:\.\d+)?)%/g, '($1 / 100)')
       .replace(/(sin|cos|tan)\((\d+(\.\d+)?)\)/g, '$1($2 deg)')
       .trim();
   }
 
-  /**
-   * Avalia a expressão com proteção contra estouro de pilha e loops infinitos
-   */
   evaluate(expressionStr) {
     if (!expressionStr || expressionStr.trim() === '') {
       return { success: true, result: '0' };
@@ -35,14 +44,17 @@ class SafeCalculator {
 
     try {
       const sanitized = this.normalizeExpression(expressionStr);
-
-      // Compilação prévia para validação do AST antes da execução
       const parsedNode = this.mathInstance.parse(sanitized);
 
-      // Validação defensiva: proibir tipos de nós que gerem atribuições globais perigosas
+      // Bloqueia declarações de variáveis ou mutações maliciosas na AST
       parsedNode.traverse((node) => {
-        if (node.type === 'AssignmentNode') {
-          throw new Error('Operação de atribuição não permitida na calculadora padrão.');
+        if (
+          node.type === 'AssignmentNode' ||
+          node.type === 'FunctionAssignmentNode' ||
+          node.type === 'AccessorNode' ||
+          node.type === 'IndexNode'
+        ) {
+          throw new Error('Operações de atribuição ou mutação de membros são proibidas.');
         }
       });
 

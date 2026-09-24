@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winsdom Desktop - Hub de Ferramentas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+    body { font-family: 'Inter', sans-serif; }
+    
+    .hub-card {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .hub-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    }
+
+    .social-pill {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .social-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between select-none">
+
+  <!-- Mini-Header Superior com Redes Sociais do Desenvolvedor -->
+  <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md px-6 py-3 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      
+      <!-- Lado Esquerdo: Identidade do Winsdom -->
+      <div class="flex items-center gap-3">
+        <img src="../public/img/Winsdom.png" alt="Logo Winsdom" class="w-9 h-9 rounded-xl shadow border border-slate-700/60 object-cover">
+        <div>
+          <h1 class="font-extrabold text-base tracking-tight text-white flex items-center gap-2">
+            Winsdom Desktop
+            <span class="text-[10px] bg-indigo-500/20 text-indigo-400 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/30">v1.1.0</span>
+          </h1>
+          <p class="text-[11px] text-slate-400">Ambiente Científico Integrado de Estudos & Modelagem</p>
+        </div>
+      </div>
+
+      <!-- Lado Direito: Mini-Header de Contato & Redes (Esboço OlluaS-code) -->
+      <div class="flex items-center gap-2">
+        <div class="hidden sm:flex flex-col text-right mr-1">
+          <span class="text-xs font-semibold text-slate-300">Saullo M. Tavares</span>
+          <span class="text-[10px] text-indigo-400 font-mono">Software Engineer</span>
+        </div>
+
+        <div class="flex items-center bg-slate-950/80 border border-slate-800 rounded-xl p-1 gap-1 shadow-inner">
+          
+          <!-- Portfólio -->
+          <button onclick="openExternalLink('https://olluas-code.github.io/dev./')" 
+                  class="social-pill p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/90 flex items-center gap-1.5 text-xs font-medium"
+                  title="Acessar Portfólio Oficial">
+            <i class="fas fa-globe text-sky-400 text-sm"></i>
+            <span class="hidden md:inline pr-1">Portfólio</span>
+          </button>
+
+          <!-- LinkedIn -->
+          <button onclick="openExternalLink('https://www.linkedin.com/in/olluas-code/')" 
+                  class="social-pill p-2 rounded-lg text-slate-300 hover:text-white hover:bg-blue-600/20 flex items-center gap-1.5 text-xs font-medium"
+                  title="Conectar no LinkedIn">
+            <i class="fab fa-linkedin text-blue-500 text-sm"></i>
+            <span class="hidden md:inline pr-1">LinkedIn</span>
+          </button>
+
+          <!-- Email -->
+          <button onclick="openExternalLink('mailto:olluas.dev@outlook.com')" 
+                  class="social-pill p-2 rounded-lg text-slate-300 hover:text-white hover:bg-amber-600/20 flex items-center gap-1.5 text-xs font-medium"
+                  title="Enviar Email: olluas.dev@outlook.com">
+            <i class="fas fa-envelope text-amber-400 text-sm"></i>
+            <span class="hidden md:inline pr-1">Contato</span>
+          </button>
+
+          <!-- GitHub -->
+          <button onclick="openExternalLink('https://github.com/OlluaS-code')" 
+                  class="social-pill p-2 rounded-lg text-slate-300 hover:text-white hover:bg-purple-600/20 flex items-center gap-1.5 text-xs font-medium"
+                  title="Repositório GitHub">
+            <i class="fab fa-github text-purple-400 text-sm"></i>
+          </button>
+
+          <div class="h-4 w-px bg-slate-800 mx-1"></div>
+
+          <!-- Sobre o App -->
+          <button onclick="launch('about')" 
+                  class="social-pill p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 text-xs"
+                  title="Sobre a Arquitetura">
+            <i class="fas fa-circle-info text-sm"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal / Grid de Módulos -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-8">
+    <div class="mb-8">
+      <h2 class="text-2xl font-bold text-white tracking-tight">O que você deseja praticar hoje?</h2>
+      <p class="text-slate-400 text-sm mt-1">Selecione uma das ferramentas abaixo para iniciar sua sessão de estudo ou desenvolvimento.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- Card: Modelagem de Dados IT -->
+      <div class="hub-card bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between group relative overflow-hidden opacity-60">
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-600/10 rounded-full blur-2xl transition-all"></div>
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-slate-800/50 text-slate-500 flex items-center justify-center text-xl mb-4 border border-slate-700/50">
+            <i class="fas fa-network-wired"></i>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="font-bold text-lg text-slate-300">Modelagem de Dados</h3>
+            <span class="text-[10px] uppercase font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded">Em Breve</span>
+          </div>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            Modelagem conceitual EER (Peter Chen / Merise), síntese lógica relacional em 7 passos e exportação DDL com suporte a até 5 projetos nomeados.
+          </p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-semibold">
+          <span>Disponível Futuramente</span>
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+
+      <!-- Card: Matemática -->
+      <div onclick="launch('math')" class="hub-card cursor-pointer bg-slate-900 border border-sky-900/40 hover:border-sky-500/60 rounded-2xl p-6 flex flex-col justify-between group relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-sky-600/10 rounded-full blur-2xl group-hover:bg-sky-600/20 transition-all"></div>
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-sky-600/20 text-sky-400 flex items-center justify-center text-xl mb-4 border border-sky-500/30 group-hover:scale-110 transition-transform">
+            <i class="fas fa-square-root-variable"></i>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="font-bold text-lg text-white group-hover:text-sky-300 transition-colors">Laboratório Matemático</h3>
+            <span class="text-[10px] uppercase font-bold bg-sky-950 text-sky-400 border border-sky-800 px-2 py-0.5 rounded">Math</span>
+          </div>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Calculadora analítica segura, editor tipográfico LaTeX/KaTeX, amostragem gráfica de funções com detecção de assíntotas e quadro de rascunhos.
+          </p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-sky-400 font-semibold">
+          <span>Abrir Módulo de Matemática</span>
+          <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+        </div>
+      </div>
+
+      <!-- Card: Biologia & Memória -->
+      <div onclick="launch('biology')" class="hub-card cursor-pointer bg-slate-900 border border-emerald-900/40 hover:border-emerald-500/60 rounded-2xl p-6 flex flex-col justify-between group relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-600/10 rounded-full blur-2xl group-hover:bg-emerald-600/20 transition-all"></div>
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-xl mb-4 border border-emerald-500/30 group-hover:scale-110 transition-transform">
+            <i class="fas fa-dna"></i>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="font-bold text-lg text-white group-hover:text-emerald-300 transition-colors">Ciências Biológicas</h3>
+            <span class="text-[10px] uppercase font-bold bg-emerald-950 text-emerald-400 border border-emerald-800 px-2 py-0.5 rounded">FSRS v4.5</span>
+          </div>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Mapas conceituais dinâmicos, glossário técnico indexado e sistema mnemônico de repetição espaçada com decaimento estocástico de longo prazo.
+          </p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-emerald-400 font-semibold">
+          <span>Abrir Módulo de Biologia</span>
+          <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+        </div>
+      </div>
+
+      <!-- Card: Física & Química -->
+      <div class="hub-card bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between group relative overflow-hidden opacity-60">
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-600/10 rounded-full blur-2xl transition-all"></div>
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-slate-800/50 text-slate-500 flex items-center justify-center text-xl mb-4 border border-slate-700/50">
+            <i class="fas fa-atom"></i>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="font-bold text-lg text-slate-300">Física & Química</h3>
+            <span class="text-[10px] uppercase font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded">Em Breve</span>
+          </div>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            Quadro vetorial acelerado por hardware para anotações rápidas, balanço de reações e diagramas cinemáticos com suporte a canetas digitalizadoras.
+          </p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-semibold">
+          <span>Disponível Futuramente</span>
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+
+      <!-- Card: Geografia & História -->
+      <div class="hub-card bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between group relative overflow-hidden opacity-60">
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-600/10 rounded-full blur-2xl transition-all"></div>
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-slate-800/50 text-slate-500 flex items-center justify-center text-xl mb-4 border border-slate-700/50">
+            <i class="fas fa-globe-americas"></i>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="font-bold text-lg text-slate-300">Geografia & História</h3>
+            <span class="text-[10px] uppercase font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded">Em Breve</span>
+          </div>
+          <p class="text-slate-500 text-sm leading-relaxed">
+            Espaço analítico para mapeamento geopolítico, esquematização de linhas temporais históricas e correlações territoriais.
+          </p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-semibold">
+          <span>Disponível Futuramente</span>
+          <i class="fas fa-clock"></i>
+        </div>
+      </div>
+
+      <!-- Card: Sobre & Engenharia -->
+      <div onclick="launch('about')" class="hub-card cursor-pointer bg-slate-900 border border-slate-800 hover:border-slate-600 rounded-2xl p-6 flex flex-col justify-between group relative overflow-hidden">
+        <div>
+          <div class="w-12 h-12 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center text-xl mb-4 border border-slate-700 group-hover:scale-110 transition-transform">
+            <i class="fas fa-code"></i>
+          </div>
+          <h3 class="font-bold text-lg text-white mb-2 group-hover:text-slate-200 transition-colors">Sobre o Sistema</h3>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Especificações da engenharia de software, modelos teóricos aplicados e portfólio completo do desenvolvedor Saullo Moura Tavares.
+          </p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-300 font-semibold">
+          <span>Ver Especificações Técnicas</span>
+          <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Rodapé -->
+  <footer class="border-t border-slate-800/80 py-4 px-6 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl w-full mx-auto">
+    <span>&copy; 2026 Winsdom Desktop. Otimizado para alto desempenho.</span>
+    <span>Desenvolvido por Saullo Moura Tavares (OlluaS-code)</span>
+  </footer>
+
+  <script>
+    function launch(moduleId) {
+      if (window.winsdom && window.winsdom.openModule) {
+        window.winsdom.openModule(moduleId);
+      } else {
+        console.warn("API de launcher não disponível no ambiente.");
+      }
+    }
+
+    function openExternalLink(url) {
+      if (window.winsdom && window.winsdom.openExternal) {
+        window.winsdom.openExternal(url);
+      } else {
+        window.open(url, '_blank');
+      }
+    }
+  </script>
+</body>
+</html>

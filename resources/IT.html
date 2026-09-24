@@ -130,14 +130,19 @@
       text {
         fill: #000000 !important; /* Texto escuro no PDF */
       }
+      text.edge-label {
+        stroke: #ffffff !important;
+      }
       /* Ajuste dos elementos SVG para branco/preto */
       rect, polygon, ellipse, path {
         stroke: #000000 !important;
         fill: #ffffff !important;
+        stroke-width: 1.5px !important;
       }
       /* Linhas de relacionamento */
       line {
         stroke: #000000 !important;
+        stroke-width: 1.5px !important;
       }
     }
     #sqlCodeOutput {
@@ -221,6 +226,10 @@
         <option value="CHEN">Notação: Peter Chen</option>
         <option value="MERISE">Notação: Merise (França)</option>
       </select>
+      <button id="btnProjects" class="action-btn" style="background: #4f46e5; margin-right: 8px;">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        <span>Projetos</span>
+      </button>
       <button id="btnUndo" class="icon-btn" title="Desfazer (Ctrl+Z)">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
       </button>
@@ -321,6 +330,28 @@
         <span id="linterBadge" style="background:#334155;color:#e2e8f0;padding:2px 6px;border-radius:10px;font-size:10px;">0</span>
       </div>
       <div id="linterList" class="linter-list"></div>
+    </div>
+    
+    <!-- Modal de Projetos -->
+    <div id="projectsModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.8); z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+      <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; width:450px; box-shadow:0 12px 32px rgba(0,0,0,0.5); padding:20px; display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:12px;">
+          <h3 style="font-size:16px; font-weight:600; color:#f8fafc;">Gerenciar Projetos</h3>
+          <button id="btnCloseProjects" class="icon-btn" style="padding:4px;"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        
+        <div id="projectsList" style="display:flex; flex-direction:column; gap:8px; max-height:300px; overflow-y:auto;">
+          <!-- Itens injetados via JS -->
+        </div>
+        
+        <div style="border-top:1px solid #334155; padding-top:16px; display:flex; justify-content:space-between; align-items:center;">
+          <span id="projectsCount" style="font-size:12px; color:#64748b;">0/5 Projetos</span>
+          <button id="btnNewProject" class="action-btn" style="background:#059669;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Novo Projeto
+          </button>
+        </div>
+      </div>
     </div>
   </main>
 

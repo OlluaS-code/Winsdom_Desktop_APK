@@ -602,9 +602,14 @@ class RelationalMappingEngine {
           const fkColId = `fk_hier_${pk.id}_${subTable.id}`;
           
           if (!subTable.columns.find(c => c.id === fkColId)) {
+            let colName = pk.name;
+            if (subTable.columns.find(c => c.name.toLowerCase() === colName.toLowerCase())) {
+              colName = `id_${superTable.name.toLowerCase()}`;
+            }
+
             subTable.columns.unshift({
               id: fkColId,
-              name: pk.name, // Mesma nomenclatura por convenção de herança
+              name: colName, // Previne colisão se a subclasse já tinha um atributo com este nome
               dataType: pk.dataType,
               isPrimaryKey: true,
               isForeignKey: true,
