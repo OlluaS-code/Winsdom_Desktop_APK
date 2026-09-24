@@ -277,23 +277,7 @@ app.whenReady().then(() => {
 
   Home(); // Abre o Hub Central ao iniciar
 
-  try {
-    tray = new Tray(icon);
-    const contextMenu = Menu.buildFromTemplate([
-      { label: "Hub Central", click: Home },
-      { type: "separator" },
-      { label: "Biologia", click: Biology },
-      { label: "Matemática", click: MathWindow },
-      { label: "Modelagem de Dados (T.I.)", click: ITWindow },
-      { type: "separator" },
-      { label: "Sair de todos", click: () => app.quit() },
-    ]);
 
-    tray.setToolTip("Winsdom Study Desktop");
-    tray.setContextMenu(contextMenu);
-  } catch (error) {
-    console.error(error);
-  }
 });
 
 app.on("second-instance", () => {
@@ -308,10 +292,7 @@ app.on("second-instance", () => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    // Se o tray não tiver carregado (ex: linux s/ libappindicator), previne processo zumbi
-    if (!tray) {
-      app.quit();
-    }
+    app.quit();
   }
 });
 
